@@ -1,0 +1,13 @@
+.env
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+# входной документ организаторов берётся из их репозитория, а не хранится здесь
+docs/requirements.md
