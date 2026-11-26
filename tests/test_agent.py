@@ -131,6 +131,33 @@ def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
     assert g.model == "main"
 
 
+def test_cache_survives_fallback_rotation(monkeypatch, tmp_path):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM("k", "main", fallbacks=["fb"], cache_dir=tmp_path, verbose=False)
+    g._pick_model = lambda: None
+
+    def busy_main(url, headers, body):
+        if "main" in url:
+            raise llm_mod._Retryable("HTTP 503", status=503)
+        return {"candidates": [{"content": {"parts": [{"text": '{"x": 1}'}]}}]}
+
+    g._post = busy_main
+    g.complete_json("s", "u1")
+    g.complete_json("s", "u2")  # уже на запасной модели
+
+    def no_network(*a, **kw):
+        raise AssertionError("ответ должен браться из кэша")
+
+    g2 = llm_mod.GeminiLLM("k", "main", fallbacks=["fb"], cache_dir=tmp_path, verbose=False)
+    g2._post = no_network
+    assert g2.complete_json("s", "u1") == {"x": 1}
+    assert g2.complete_json("s", "u2") == {"x": 1}
+    assert g2.calls == 0 and g2.cache_hits == 2
+    assert g2.label == "gemini / fb"  # в паспорт попадает модель, которая реально отвечала
+
+
 def test_parse_json_handles_fences():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert parse_json('Вот ответ: {"a": 2} конец') == {"a": 2}

@@ -68,6 +68,9 @@ class LLM:
                  max_retries: int = 6, timeout: float = 600.0, temperature: float = 0.0,
                  verbose: bool = True):
         self.model = model
+        # Ключ кэша строится от запрошенной модели, а не от текущей: после перехода
+        # на запасную модель повторный прогон всё равно находит ответы в кэше.
+        self.requested_model = model
         self.cache_dir = cache_dir
         self.min_interval = min_interval
         self.max_retries = max_retries
@@ -90,13 +93,16 @@ class LLM:
 
     def complete_json(self, system: str, user: str, *, step: str = "") -> dict:
         key = hashlib.sha256(
-            json.dumps([self.provider, self.model, self.temperature, system, user]).encode()
+            json.dumps([self.provider, self.requested_model, self.temperature, system, user]).encode()
         ).hexdigest()[:32]
         cached = self._cache_get(key)
         if cached is not None:
+            data, answered_by = cached
             self.cache_hits += 1
-            self._log(f"  [{step}] ответ из кэша")
-            return cached
+            if answered_by and answered_by not in self.models_used:
+                self.models_used.append(answered_by)
+            self._log(f"  [{step}] ответ из кэша ({answered_by or 'модель не записана'})")
+            return data
 
         prompt = user
         last_err = ""
@@ -130,7 +136,7 @@ class LLM:
                 prompt = (user + "\n\nВНИМАНИЕ: предыдущий ответ не был валидным JSON. "
                           "Верни только один JSON-объект без пояснений и без markdown.")
                 continue
-            self._cache_put(key, data)
+            self._cache_put(key, data, self.model)
             return data
         raise LLMError(f"Модель не дала корректный ответ на шаге «{step}»: {last_err}")
 
@@ -144,23 +150,30 @@ class LLM:
             time.sleep(self.min_interval - delta)
         self._last = time.time()
 
-    def _cache_get(self, key: str) -> dict | None:
+    def _cache_get(self, key: str) -> tuple[dict, str] | None:
+        """Возвращает (ответ, модель, которая его дала)."""
         if not self.cache_dir:
             return None
         f = self.cache_dir / f"{key}.json"
-        if f.exists():
-            try:
-                return json.loads(f.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                return None
-        return None
+        if not f.exists():
+            return None
+        try:
+            entry = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(entry, dict):
+            return None
+        if set(entry) == {"model", "response"} and isinstance(entry["response"], dict):
+            return entry["response"], str(entry["model"] or "")
+        return entry, ""  # запись старого формата: только ответ
 
-    def _cache_put(self, key: str, data: dict) -> None:
+    def _cache_put(self, key: str, data: dict, model: str) -> None:
         if not self.cache_dir:
             return
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         (self.cache_dir / f"{key}.json").write_text(
-            json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            json.dumps({"model": model, "response": data}, ensure_ascii=False, indent=1),
+            encoding="utf-8")
 
     def _log(self, msg: str) -> None:
         if self.verbose:
