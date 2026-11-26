@@ -75,6 +75,8 @@ class FakeLLM(LLM):
                                              "related": ["R-01"], "problem": "Нет сценария ошибки.",
                                              "recommendation": "Добавить.", "question": "?"}]},
                               ensure_ascii=False)
+        if "найти ПРОТИВОРЕЧИЯ" in user:
+            return json.dumps({"findings": []})
         if "второй ревьюер" in user:
             return "```json\n" + json.dumps({
                 "decisions": [], "dev_ready": "yes", "test_ready": "yes",
@@ -89,6 +91,26 @@ def spec(tmp_path: Path) -> Path:
     p = tmp_path / "spec.md"
     p.write_text(SPEC, encoding="utf-8")
     return p
+
+
+def test_gemini_rotates_to_fallback_model(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM("k", "busy-model", fallbacks=["gone-model", "ok-model"], verbose=False)
+    g._pick_model = lambda: None
+
+    def fake_post(url, headers, body):
+        if "busy-model" in url:
+            raise llm_mod._Retryable("HTTP 503")
+        if "gone-model" in url:
+            raise llm_mod.LLMError("HTTP 404 от gemini: no longer available")
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": true}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u", step="t") == {"ok": True}
+    assert g.model == "ok-model" and g.models_used == ["ok-model"]
+    assert g.label == "gemini / ok-model"
 
 
 def test_parse_json_handles_fences():

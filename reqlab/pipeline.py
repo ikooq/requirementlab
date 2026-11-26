@@ -124,6 +124,8 @@ class Agent:
         self.log("4/5 Проверка набора требований целиком…")
         set_verdicts, set_raw = self._check_set(doc, numbered, reqs, acs, raw)
         raw += set_raw
+        self.log("    поиск противоречий…")
+        raw += self._conflicts(doc, numbered, reqs, acs, raw)
 
         findings, dropped = self._ground(raw, loc)
         findings += self._rule_findings(hits)
@@ -142,6 +144,10 @@ class Agent:
             remap = {old_ids[id(f)]: f.id for f in findings}
             for fx in fixes:
                 fx["finding_ids"] = [remap[i] for i in fx["finding_ids"] if i in remap]
+                fx["action"] = _remap_ids(fx["action"], remap)
+            text = _remap_ids(text, remap)
+            for d in dropped:
+                d["reason"] = _remap_ids(d["reason"], remap)
             self._reconcile_verdicts(reqs, findings)
         dev, test = _gate(findings, acs, dev, test)
 
@@ -250,6 +256,18 @@ class Agent:
         found = [{**f, "scope": "SET"} for f in data.get("findings") or []]
         return verdicts, found
 
+    def _conflicts(self, doc, numbered, reqs, acs, raw) -> list[dict]:
+        known = "\n".join(f"- {f.get('scope')} {f.get('criterion')}: {str(f.get('problem'))[:140]}"
+                          for f in raw if f.get("criterion") in ("COR", "S-CON")) or "нет"
+        req_txt = "\n".join(f"- {r.id} [{r.doc_id or 'без номера'}; строки {r.line_start}–"
+                            f"{r.line_end}]: «{r.quote}»" for r in reqs)
+        ac_txt = "\n".join(f"- {a['id']} (строка {a['line']}): {a['quote']}" for a in acs) or "нет"
+        user = prompts.CONFLICTS.format(known=known, reqs=req_txt, acs=ac_txt,
+                                        title=doc.title, doc=numbered)
+        data = self.llm.complete_json(prompts.SYSTEM, user, step="поиск противоречий")
+        return [{**f, "scope": "SET", "criterion": f.get("criterion") or "S-CON"}
+                for f in data.get("findings") or []]
+
     # --- привязка цитат --------------------------------------------------
     def _ground(self, raw: list[dict], loc: Locator):
         findings, dropped = [], []
@@ -341,6 +359,14 @@ class Agent:
 
 
 # --- вспомогательные функции ---------------------------------------------
+def _remap_ids(text: str, remap: dict[str, str]) -> str:
+    """Номера находок в тексте модели — на номера после перенумерации."""
+    def sub(m: re.Match) -> str:
+        old = m.group(0)
+        return remap.get(old, f"{old} (отсеяна)")
+    return re.sub(r"F-\d{3}", sub, text or "")
+
+
 def _gate(findings, acs, dev: str, test: str) -> tuple[str, str]:
     """Решение «можно ли начинать» не отдаётся модели целиком: критичная находка — всегда «нет»."""
     crit = [f for f in findings if f.severity == "critical"]

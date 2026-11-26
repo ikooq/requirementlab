@@ -17,7 +17,10 @@ from pathlib import Path
 
 import requests
 
-GEMINI_DEFAULT_MODEL = "gemini-2.5-flash"
+GEMINI_DEFAULT_MODEL = "gemini-3-flash-preview"
+# Запасные модели на случай 404/429/503; переопределяются GEMINI_FALLBACK_MODELS в .env
+GEMINI_FALLBACKS = ["gemini-3.5-flash", "gemini-3.7-flash", "gemini-3.6-flash",
+                    "gemini-flash-latest", "gemini-3.1-pro-preview"]
 OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
 
 
@@ -63,11 +66,17 @@ class LLM:
         self.verbose = verbose
         self.calls = 0          # реальные обращения к API
         self.cache_hits = 0
+        self.models_used: list[str] = []
         self._last = 0.0
 
     @property
     def label(self) -> str:
-        return f"{self.provider} / {self.model}"
+        used = self.models_used or [self.model]
+        return f"{self.provider} / {', '.join(used)}"
+
+    def _rotate(self, reason: str) -> bool:
+        """Переключиться на запасную модель. По умолчанию запасных нет."""
+        return False
 
     def complete_json(self, system: str, user: str, *, step: str = "") -> dict:
         key = hashlib.sha256(
@@ -81,16 +90,25 @@ class LLM:
 
         prompt = user
         last_err = ""
+        fails_on_model = 0
         for attempt in range(1, self.max_retries + 1):
             self._throttle()
             try:
                 t0 = time.time()
                 text = self._call(system, prompt)
                 self.calls += 1
-                self._log(f"  [{step}] ответ модели за {time.time() - t0:.1f} с")
+                if self.model not in self.models_used:
+                    self.models_used.append(self.model)
+                self._log(f"  [{step}] ответ модели {self.model} за {time.time() - t0:.1f} с")
             except _Retryable as e:
-                wait = e.wait or min(60.0, 5.0 * 2 ** (attempt - 1))
                 last_err = str(e)
+                fails_on_model += 1
+                # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
+                if fails_on_model >= 2 and self._rotate(last_err):
+                    fails_on_model = 0
+                    time.sleep(2)
+                    continue
+                wait = min(e.wait or 5.0 * 2 ** (attempt - 1), 60.0)
                 self._log(f"  [{step}] {e}; повтор через {wait:.0f} с ({attempt}/{self.max_retries})")
                 time.sleep(wait)
                 continue
@@ -161,10 +179,26 @@ class GeminiLLM(LLM):
     provider = "gemini"
     BASE = "https://generativelanguage.googleapis.com/v1beta"
 
-    def __init__(self, api_key: str, model: str = GEMINI_DEFAULT_MODEL, **kw):
+    def __init__(self, api_key: str, model: str = GEMINI_DEFAULT_MODEL,
+                 fallbacks: list[str] | None = None, **kw):
         super().__init__(model, **kw)
         self.api_key = api_key
-        self._switched = False
+        chain = [model] + [m for m in (fallbacks or GEMINI_FALLBACKS) if m != model]
+        self._queue = chain[1:]
+        self._discovered = False
+
+    def _rotate(self, reason: str) -> bool:
+        if not self._queue and not self._discovered:
+            self._discovered = True
+            picked = self._pick_model()
+            if picked and picked != self.model:
+                self._queue.append(picked)
+        if not self._queue:
+            return False
+        new = self._queue.pop(0)
+        self._log(f"  модель {self.model} недоступна ({reason}), переключаюсь на {new}")
+        self.model = new
+        return True
 
     def _pick_model(self) -> str | None:
         try:
@@ -196,19 +230,14 @@ class GeminiLLM(LLM):
             },
         }
         headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
-        try:
-            data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
-        except LLMError as e:
-            # Имя модели устарело — выбираем актуальную flash-модель из доступных ключу.
-            if "HTTP 404" not in str(e) or self._switched:
-                raise
-            self._switched = True
-            new = self._pick_model()
-            if not new:
-                raise
-            self._log(f"  модель {self.model} недоступна, переключаюсь на {new}")
-            self.model = new
-            data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
+        while True:
+            try:
+                data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
+                break
+            except LLMError as e:
+                # Модель снята для новых пользователей (404) — сразу берём запасную.
+                if "HTTP 404" not in str(e) or not self._rotate("HTTP 404"):
+                    raise
         cands = data.get("candidates") or []
         if not cands:
             reason = (data.get("promptFeedback") or {}).get("blockReason", "пустой ответ")
@@ -267,8 +296,9 @@ def from_env(provider: str | None = None, model: str | None = None, *,
         key = os.environ.get("GEMINI_API_KEY", "")
         if not key:
             raise LLMError("GEMINI_API_KEY не задан в .env")
+        fb = [m.strip() for m in os.environ.get("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
         return GeminiLLM(key, model or os.environ.get("GEMINI_MODEL") or GEMINI_DEFAULT_MODEL,
-                         min_interval=interval or 4.0, **common)
+                         fallbacks=fb or None, min_interval=interval or 4.0, **common)
     if provider in ("openai", "openai-compatible", "groq", "openrouter", "ollama"):
         return OpenAICompatLLM(
             os.environ.get("OPENAI_API_KEY", ""),

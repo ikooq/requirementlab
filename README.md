@@ -33,7 +33,7 @@ python run.py docs/requirements.md reports/report.md
 
 ## Как получить ключ LLM
 
-По умолчанию агент работает на **Google Gemini `gemini-2.5-flash`**. Бесплатного тарифа хватает.
+По умолчанию агент работает на **Google Gemini `gemini-3-flash-preview`**. Бесплатного тарифа хватает. Если модель перегружена (503), исчерпана квота (429) или снята (404), агент сам переключается на запасные: `gemini-3.5-flash`, `gemini-3.7-flash` и далее. Модели, реально использованные в прогоне, записываются в паспорт отчёта.
 
 1. Откройте [aistudio.google.com/apikey](https://aistudio.google.com/apikey) и войдите через Google-аккаунт.
 2. Нажмите **Create API key** и скопируйте ключ.
