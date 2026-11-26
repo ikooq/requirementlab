@@ -30,10 +30,12 @@ class LLMError(Exception):
 
 
 class _Retryable(Exception):
-    def __init__(self, msg: str, wait: float | None = None, status: int = 0):
+    def __init__(self, msg: str, wait: float | None = None, status: int = 0,
+                 daily_quota: bool = False):
         super().__init__(msg)
         self.wait = wait
         self.status = status
+        self.daily_quota = daily_quota
 
     @property
     def model_unavailable(self) -> bool:
@@ -107,7 +109,11 @@ class LLM:
         prompt = user
         last_err = ""
         fails_on_model = 0
-        for attempt in range(1, self.max_retries + 1):
+        attempt = 0
+        # Лимит попыток считается на модель: переход на запасную модель даёт ей
+        # полный набор попыток, иначе до последних запасных дело не доходит.
+        while attempt < self.max_retries:
+            attempt += 1
             self._throttle()
             try:
                 t0 = time.time()
@@ -120,8 +126,11 @@ class LLM:
                 last_err = str(e)
                 fails_on_model += 1
                 # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
-                if fails_on_model >= 2 and e.model_unavailable and self._rotate(last_err):
+                # Дневная квота не восстановится за минуты — переключаемся сразу.
+                if ((fails_on_model >= 2 or e.daily_quota) and e.model_unavailable
+                        and self._rotate(last_err)):
                     fails_on_model = 0
+                    attempt = 0
                     time.sleep(2)
                     continue
                 wait = min(e.wait or 5.0 * 2 ** (attempt - 1), 65.0)
@@ -192,9 +201,11 @@ class LLM:
             m = re.search(r'"retryDelay":\s*"(\d+)(?:\.\d+)?s"', r.text)
             if m:
                 wait = float(m.group(1)) + 1
-            if r.status_code == 429 and re.search(r"PerDay", r.text):
+            daily = r.status_code == 429 and bool(re.search(r"PerDay", r.text))
+            if daily:
                 wait = None  # дневная квота: ждать бессмысленно, нужна другая модель
-            raise _Retryable(f"HTTP {r.status_code}", wait, r.status_code)
+            raise _Retryable(f"HTTP {r.status_code}" + (" (дневная квота)" if daily else ""),
+                             wait, r.status_code, daily_quota=daily)
         if r.status_code >= 400:
             raise LLMError(f"HTTP {r.status_code} от {self.provider}: {r.text[:500]}")
         return r.json()

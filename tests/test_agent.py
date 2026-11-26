@@ -113,6 +113,24 @@ def test_gemini_rotates_to_fallback_model(monkeypatch):
     assert g.label == "gemini / ok-model"
 
 
+def test_daily_quota_walks_whole_fallback_chain(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    chain = ["m1", "m2", "m3", "m4", "m5"]
+    g = llm_mod.GeminiLLM("k", "m0", fallbacks=chain, verbose=False)
+    g._pick_model = lambda: None
+
+    def fake_post(url, headers, body):
+        if "m5" not in url:
+            raise llm_mod._Retryable("HTTP 429", None, 429, daily_quota=True)
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 5}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 5}
+    assert g.model == "m5"
+
+
 def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
     from reqlab import llm as llm_mod
 
