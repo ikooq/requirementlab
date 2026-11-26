@@ -164,6 +164,26 @@ class GeminiLLM(LLM):
     def __init__(self, api_key: str, model: str = GEMINI_DEFAULT_MODEL, **kw):
         super().__init__(model, **kw)
         self.api_key = api_key
+        self._switched = False
+
+    def _pick_model(self) -> str | None:
+        try:
+            r = requests.get(f"{self.BASE}/models", headers={"x-goog-api-key": self.api_key},
+                             params={"pageSize": 200}, timeout=30)
+            models = r.json().get("models", []) if r.ok else []
+        except (requests.RequestException, ValueError):
+            return None
+        names = [m["name"].split("/", 1)[-1] for m in models
+                 if "generateContent" in (m.get("supportedGenerationMethods") or [])]
+        flash = [n for n in names if "flash" in n and "lite" not in n and "image" not in n
+                 and "tts" not in n and "live" not in n and "exp" not in n]
+
+        def ver(n: str):
+            m = re.search(r"gemini-(\d+)(?:\.(\d+))?", n)
+            return (int(m.group(1)), int(m.group(2) or 0), "preview" not in n) if m else (0, 0, False)
+
+        flash.sort(key=ver, reverse=True)
+        return flash[0] if flash else (names[0] if names else None)
 
     def _call(self, system: str, user: str) -> str:
         body = {
@@ -175,9 +195,20 @@ class GeminiLLM(LLM):
                 "maxOutputTokens": 32768,
             },
         }
-        data = self._post(f"{self.BASE}/models/{self.model}:generateContent",
-                          {"x-goog-api-key": self.api_key, "Content-Type": "application/json"},
-                          body)
+        headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+        try:
+            data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
+        except LLMError as e:
+            # Имя модели устарело — выбираем актуальную flash-модель из доступных ключу.
+            if "HTTP 404" not in str(e) or self._switched:
+                raise
+            self._switched = True
+            new = self._pick_model()
+            if not new:
+                raise
+            self._log(f"  модель {self.model} недоступна, переключаюсь на {new}")
+            self.model = new
+            data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
         cands = data.get("candidates") or []
         if not cands:
             reason = (data.get("promptFeedback") or {}).get("blockReason", "пустой ответ")
