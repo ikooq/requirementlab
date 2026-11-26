@@ -158,6 +158,38 @@ def test_cache_survives_fallback_rotation(monkeypatch, tmp_path):
     assert g2.label == "gemini / fb"  # в паспорт попадает модель, которая реально отвечала
 
 
+def test_unknown_requirement_ids_are_scrubbed():
+    from reqlab.pipeline import Evidence, Finding, _scrub_refs
+
+    f = Finding(id="", scope="SET", criterion="S-CON", severity="major",
+                problem="R-02 противоречит R-103.", recommendation="Сверить R-103.", question="",
+                evidence=[Evidence("x", 1, 1, True)], related=["R-02", "R-103"])
+    _scrub_refs([f], {"R-01", "R-02"})
+    assert f.related == ["R-02"]
+    assert "R-103" not in f.problem + f.recommendation
+    assert f.problem.startswith("R-02 ")
+
+
+def test_version_placeholder_reported_once(tmp_path):
+    p = tmp_path / "d.md"
+    p.write_text("# Док\n\nДокумент (версия/дата) не заполнен.\n\n* Ф-1. Что-то.\n", encoding="utf-8")
+    hits = rules.run(load(p))
+    assert [h.rule for h in hits if h.line_start == 3] == ["no-version"]
+
+
+def test_rule_placeholder_skipped_when_llm_covers_line(spec):
+    from reqlab.pipeline import Evidence, Finding
+
+    doc = load(spec)
+    hits = [rules.RuleHit("placeholder", "S-CMP", "major", 4, 4, "q", "p", "r")]
+    llm = [Finding(id="", scope="R-01", criterion="CMP", severity="major", problem="p",
+                   recommendation="", question="", evidence=[Evidence("q", 4, 4, True)])]
+    agent = Agent(FakeLLM(), verbose=False)
+    assert agent._rule_findings(hits, llm) == []
+    assert len(agent._rule_findings(hits, [])) == 1
+    assert doc  # документ загружается
+
+
 def test_parse_json_handles_fences():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert parse_json('Вот ответ: {"a": 2} конец') == {"a": 2}

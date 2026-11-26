@@ -128,8 +128,12 @@ class Agent:
         raw += self._conflicts(doc, numbered, reqs, acs, raw)
 
         findings, dropped = self._ground(raw, loc)
-        findings += self._rule_findings(hits)
+        findings += self._rule_findings(hits, findings)
         findings = _dedupe(findings)
+        known = {r.id for r in reqs}
+        _scrub_refs(findings, known)
+        for d in dropped:
+            d["problem"] = _scrub_text(d.get("problem", ""), known)
         _renumber(findings)
         self._reconcile_verdicts(reqs, findings)
 
@@ -147,7 +151,10 @@ class Agent:
                 fx["action"] = _remap_ids(fx["action"], remap)
             text = _remap_ids(text, remap)
             for d in dropped:
-                d["reason"] = _remap_ids(d["reason"], remap)
+                d["reason"] = _scrub_text(_remap_ids(d["reason"], remap), known)
+            text = _scrub_text(text, known)
+            for fx in fixes:
+                fx["action"] = _scrub_text(fx["action"], known)
             self._reconcile_verdicts(reqs, findings)
         dev, test = _gate(findings, acs, dev, test)
 
@@ -219,7 +226,7 @@ class Agent:
         hint_txt = "\n".join(f"- строка {h.line_start}: {h.problem}" for h in hits
                              if h.line_start in lines) or "нет"
         user = prompts.CHECK_REQUIREMENTS.format(
-            criteria=prompts.individual_criteria(), severity=prompts.SEVERITY_GUIDE,
+            criteria=prompts.individual_criteria(), severity=prompts.CHECK_GUIDE,
             hints=hint_txt, all_reqs=_req_list(reqs), targets=_req_targets(batch),
             title=doc.title, doc=numbered)
         data = self.llm.complete_json(prompts.SYSTEM, user,
@@ -245,7 +252,7 @@ class Agent:
                           for f in raw) or "нет"
         ac_txt = "\n".join(f"- {a['id']} (строка {a['line']}): {a['quote']}" for a in acs) or "нет"
         user = prompts.CHECK_SET.format(
-            criteria=prompts.set_criteria(), severity=prompts.SEVERITY_GUIDE,
+            criteria=prompts.set_criteria(), severity=prompts.CHECK_GUIDE,
             all_reqs=_req_list(reqs), acs=ac_txt, known=known, title=doc.title, doc=numbered)
         data = self.llm.complete_json(prompts.SYSTEM, user, step="проверка набора")
         verdicts = {}
@@ -300,11 +307,16 @@ class Agent:
                 related=[str(x) for x in (f.get("related") or [])]))
         return findings, dropped
 
-    def _rule_findings(self, hits) -> list[Finding]:
+    def _rule_findings(self, hits, llm_findings: list[Finding] = ()) -> list[Finding]:
+        # Строки, о которых уже есть находка модели: правило там не дублируем.
+        covered = {ln for f in llm_findings for e in f.evidence
+                   for ln in range(e.line_start, e.line_end + 1)}
         out = []
         for h in hits:
             if h.rule == "vague-word":
                 continue  # размытые слова — только подсказка модели, без отдельной находки
+            if h.rule == "placeholder" and h.line_start in covered:
+                continue
             out.append(Finding(id="", scope="SET", criterion=h.criterion, severity=h.severity,
                                problem=h.problem, recommendation=h.recommendation, question="",
                                evidence=[Evidence(h.quote, h.line_start, h.line_end, True)],
@@ -370,6 +382,23 @@ def doc_text(doc: Document, start: int, end: int) -> str:
     """Текст строк документа start..end без markdown-разметки — то, что реально написано."""
     parts = [_MD.sub("", ln).strip(" \t*-#>|") for ln in doc.lines[start - 1:end]]
     return " ".join(p for p in parts if p)
+
+
+_REQ_REF = re.compile(r"\bR-\d+\b")
+
+
+def _scrub_text(text: str, known: set[str]) -> str:
+    """Ссылка модели на несуществующее требование (R-103 при 43 требованиях) — не в отчёт."""
+    return _REQ_REF.sub(lambda m: m.group(0) if m.group(0) in known else "[требование вне нарезки]",
+                        text or "")
+
+
+def _scrub_refs(findings: list[Finding], known: set[str]) -> None:
+    for f in findings:
+        f.related = [r for r in f.related if r in known]
+        f.problem = _scrub_text(f.problem, known)
+        f.recommendation = _scrub_text(f.recommendation, known)
+        f.question = _scrub_text(f.question, known)
 
 
 def _remap_ids(text: str, remap: dict[str, str]) -> str:

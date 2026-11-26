@@ -82,8 +82,13 @@ def run(doc: Document) -> list[RuleHit]:
             f"«Да / Нет» без выбранного значения (строки {a}–{b}).",
             "Пройти чек-лист ревью и проставить отметки до передачи в разработку."))
     if not _VERSION_RE.search(doc.text):
+        # Строка «версия не заполнена», если она есть, — лучшая цитата; отдельная
+        # находка-заглушка для неё не нужна, иначе одна проблема попадёт в отчёт дважды.
+        vline = next((h.line_start for h in hits
+                      if h.rule == "placeholder" and re.search(r"верси", h.quote, re.I)), 1)
+        hits[:] = [h for h in hits if not (h.rule == "placeholder" and h.line_start == vline)]
         hits.append(RuleHit(
-            "no-version", "S-MOD", "major", 1, 1, doc.lines[0].strip(),
+            "no-version", "S-MOD", "major", vline, vline, doc.lines[vline - 1].strip(),
             "В документе не указаны номер версии и дата.",
             "Добавить версию, дату и историю изменений документа."))
     return hits
