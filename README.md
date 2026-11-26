@@ -1,5 +1,7 @@
 # RequirementLab — агент проверки требований
 
+[![tests](https://github.com/ikooq/requirementlab/actions/workflows/tests.yml/badge.svg)](https://github.com/ikooq/requirementlab/actions/workflows/tests.yml)
+
 AI-агент для **BCC-HUB × MNU FinTech Hackathon 2026** ([кейс](https://github.com/BCC-HUB/ai-requirements-validator-task)).
 Агент проводит статическое ревью документа требований до начала разработки. Он нарезает документ на отдельные требования,
 проверяет каждое требование и весь набор по ISO/IEC/IEEE 29148:2018 (п. 5.2.5, 5.2.6) и IEEE Std 830-1998 (п. 4.3),
@@ -10,7 +12,7 @@ AI-агент для **BCC-HUB × MNU FinTech Hackathon 2026** ([кейс](https
 Нужен Python 3.10 или новее.
 
 ```bash
-git clone <этот репозиторий> && cd requirementlab
+git clone https://github.com/ikooq/requirementlab && cd requirementlab
 python -m pip install -r requirements.txt
 cp .env.example .env          # Windows: copy .env.example .env
 # впишите GEMINI_API_KEY в .env
