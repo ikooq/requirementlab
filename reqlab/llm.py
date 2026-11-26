@@ -29,9 +29,18 @@ class LLMError(Exception):
 
 
 class _Retryable(Exception):
-    def __init__(self, msg: str, wait: float | None = None):
+    def __init__(self, msg: str, wait: float | None = None, status: int = 0):
         super().__init__(msg)
         self.wait = wait
+        self.status = status
+
+    @property
+    def model_unavailable(self) -> bool:
+        """Перегрузка (5xx) или долгая блокировка квоты — есть смысл сменить модель.
+        Минутный лимит (429 с коротким retryDelay) — дешевле подождать."""
+        if self.status >= 500:
+            return True
+        return self.status == 429 and (self.wait is None or self.wait > 65)
 
 
 def parse_json(text: str) -> dict:
@@ -104,11 +113,11 @@ class LLM:
                 last_err = str(e)
                 fails_on_model += 1
                 # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
-                if fails_on_model >= 2 and self._rotate(last_err):
+                if fails_on_model >= 2 and e.model_unavailable and self._rotate(last_err):
                     fails_on_model = 0
                     time.sleep(2)
                     continue
-                wait = min(e.wait or 5.0 * 2 ** (attempt - 1), 60.0)
+                wait = min(e.wait or 5.0 * 2 ** (attempt - 1), 65.0)
                 self._log(f"  [{step}] {e}; повтор через {wait:.0f} с ({attempt}/{self.max_retries})")
                 time.sleep(wait)
                 continue
@@ -166,10 +175,12 @@ class LLM:
             ra = r.headers.get("Retry-After")
             if ra and ra.isdigit():
                 wait = float(ra)
-            m = re.search(r'"retryDelay":\s*"(\d+)s"', r.text)
+            m = re.search(r'"retryDelay":\s*"(\d+)(?:\.\d+)?s"', r.text)
             if m:
                 wait = float(m.group(1)) + 1
-            raise _Retryable(f"HTTP {r.status_code}", wait)
+            if r.status_code == 429 and re.search(r"PerDay", r.text):
+                wait = None  # дневная квота: ждать бессмысленно, нужна другая модель
+            raise _Retryable(f"HTTP {r.status_code}", wait, r.status_code)
         if r.status_code >= 400:
             raise LLMError(f"HTTP {r.status_code} от {self.provider}: {r.text[:500]}")
         return r.json()
@@ -298,7 +309,7 @@ def from_env(provider: str | None = None, model: str | None = None, *,
             raise LLMError("GEMINI_API_KEY не задан в .env")
         fb = [m.strip() for m in os.environ.get("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
         return GeminiLLM(key, model or os.environ.get("GEMINI_MODEL") or GEMINI_DEFAULT_MODEL,
-                         fallbacks=fb or None, min_interval=interval or 4.0, **common)
+                         fallbacks=fb or None, min_interval=interval or 13.0, **common)
     if provider in ("openai", "openai-compatible", "groq", "openrouter", "ollama"):
         return OpenAICompatLLM(
             os.environ.get("OPENAI_API_KEY", ""),

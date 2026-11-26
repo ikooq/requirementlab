@@ -102,7 +102,7 @@ def test_gemini_rotates_to_fallback_model(monkeypatch):
 
     def fake_post(url, headers, body):
         if "busy-model" in url:
-            raise llm_mod._Retryable("HTTP 503")
+            raise llm_mod._Retryable("HTTP 503", status=503)
         if "gone-model" in url:
             raise llm_mod.LLMError("HTTP 404 от gemini: no longer available")
         return {"candidates": [{"content": {"parts": [{"text": '{"ok": true}'}]}}]}
@@ -111,6 +111,24 @@ def test_gemini_rotates_to_fallback_model(monkeypatch):
     assert g.complete_json("s", "u", step="t") == {"ok": True}
     assert g.model == "ok-model" and g.models_used == ["ok-model"]
     assert g.label == "gemini / ok-model"
+
+
+def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM("k", "main", fallbacks=["other"], verbose=False)
+    calls = {"n": 0}
+
+    def fake_post(url, headers, body):
+        calls["n"] += 1
+        if calls["n"] <= 3:
+            raise llm_mod._Retryable("HTTP 429", wait=20, status=429)
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 1}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 1}
+    assert g.model == "main"
 
 
 def test_parse_json_handles_fences():
