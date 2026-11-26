@@ -46,7 +46,8 @@ def render(res: RunResult) -> str:
     rows = [
         ("Документ", f"{doc.title} (`{doc.name}`, {doc.fmt.upper()}, {len(doc.lines)} строк)"),
         ("SHA-256 документа", f"`{doc.sha256[:16]}…`"),
-        ("Дата прогона", res.started.strftime("%d.%m.%Y %H:%M:%S %Z").strip()),
+        ("Дата прогона", res.started.strftime("%d.%m.%Y %H:%M:%S") + " (UTC"
+         + res.started.strftime("%z")[:3] + ":" + res.started.strftime("%z")[3:] + ")"),
         ("Модель", res.model),
         ("Версия агента", res.agent_version),
         ("Методика", "ISO/IEC/IEEE 29148:2018 п. 5.2.5 и 5.2.6; IEEE Std 830-1998 п. 4.3"),
