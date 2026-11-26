@@ -82,6 +82,7 @@ class LLM:
         self.calls = 0          # реальные обращения к API
         self.cache_hits = 0
         self.models_used: list[str] = []
+        self._exhausted: set[str] = set()  # модели с исчерпанной дневной квотой
         self._last = 0.0
 
     @property
@@ -127,12 +128,16 @@ class LLM:
                 fails_on_model += 1
                 # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
                 # Дневная квота не восстановится за минуты — переключаемся сразу.
+                if e.daily_quota:
+                    self._exhausted.add(self.model)
                 if ((fails_on_model >= 2 or e.daily_quota) and e.model_unavailable
                         and self._rotate(last_err)):
                     fails_on_model = 0
                     attempt = 0
                     time.sleep(2)
                     continue
+                if e.daily_quota:  # запасных нет, а квота кончилась до завтра — не ждём зря
+                    break
                 wait = min(e.wait or 5.0 * 2 ** (attempt - 1), 65.0)
                 self._log(f"  [{step}] {e}; повтор через {wait:.0f} с ({attempt}/{self.max_retries})")
                 time.sleep(wait)
@@ -229,6 +234,7 @@ class GeminiLLM(LLM):
             picked = self._pick_model()
             if picked and picked != self.model:
                 self._queue.append(picked)
+        self._queue = [m for m in self._queue if m not in self._exhausted]
         if not self._queue:
             return False
         new = self._queue.pop(0)

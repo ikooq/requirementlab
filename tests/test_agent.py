@@ -131,6 +131,24 @@ def test_daily_quota_walks_whole_fallback_chain(monkeypatch):
     assert g.model == "m5"
 
 
+def test_all_daily_quotas_exhausted_fails_fast(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM("k", "m0", fallbacks=["m1"], verbose=False)
+    g._pick_model = lambda: "m0"  # «новая» модель из списка API уже исчерпана
+    calls = {"n": 0}
+
+    def fake_post(url, headers, body):
+        calls["n"] += 1
+        raise llm_mod._Retryable("HTTP 429", None, 429, daily_quota=True)
+
+    g._post = fake_post
+    with pytest.raises(llm_mod.LLMError):
+        g.complete_json("s", "u")
+    assert calls["n"] == 2  # по одному запросу на модель, без повторов на исчерпанной
+
+
 def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
     from reqlab import llm as llm_mod
 
