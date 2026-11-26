@@ -151,6 +151,16 @@ def test_locator_finds_quote_despite_markdown(spec):
     assert loc.find("совершенно другой текст про кредиты и ипотеку") is None
 
 
+def test_inexact_quote_is_replaced_by_document_text(spec):
+    from reqlab.pipeline import doc_text
+
+    doc = load(spec)
+    loc = Locator(doc)
+    m = loc.find("Ф-1: клиент переводит от 100 до 500000 тенге между счетами")
+    assert m and not m.exact and m.start == 4
+    assert doc_text(doc, m.start, m.end) == "Ф-1. Клиент переводит от 100 до 500 000 ₸ между своими счетами."
+
+
 def test_rules_detect_service_gaps(spec):
     hits = {h.rule for h in rules.run(load(spec))}
     assert {"vague-word", "empty-row", "no-version"} <= hits

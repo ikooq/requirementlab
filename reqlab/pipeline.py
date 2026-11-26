@@ -172,6 +172,8 @@ class Agent:
             m = loc.find(quote, hint)
             if m:
                 start, end = m.start, m.end
+                if not m.exact:
+                    quote = doc_text(doc, start, end)
             elif hint and 1 <= hint <= len(doc.lines):
                 start, end = hint, _int(item.get("line_end")) or hint
                 quote = doc.lines[start - 1].strip()
@@ -280,7 +282,9 @@ class Agent:
             for q in quotes[:4]:
                 m = loc.find(str(q), f.get("_hint"))
                 if m:
-                    ev.append(Evidence(str(q).strip(), m.start, m.end, m.exact))
+                    # Неточную цитату модели в отчёт не выводим: показываем текст документа.
+                    text = str(q).strip() if m.exact else doc_text(loc.doc, m.start, m.end)
+                    ev.append(Evidence(text, m.start, m.end, m.exact))
             problem = str(f.get("problem") or "").strip()
             if not ev or not problem:
                 dropped.append({"id": f"raw-{n}", "scope": f.get("scope"), "criterion": crit,
@@ -359,6 +363,15 @@ class Agent:
 
 
 # --- вспомогательные функции ---------------------------------------------
+_MD = re.compile(r"\*\*|__|`")
+
+
+def doc_text(doc: Document, start: int, end: int) -> str:
+    """Текст строк документа start..end без markdown-разметки — то, что реально написано."""
+    parts = [_MD.sub("", ln).strip(" \t*-#>|") for ln in doc.lines[start - 1:end]]
+    return " ".join(p for p in parts if p)
+
+
 def _remap_ids(text: str, remap: dict[str, str]) -> str:
     """Номера находок в тексте модели — на номера после перенумерации."""
     def sub(m: re.Match) -> str:

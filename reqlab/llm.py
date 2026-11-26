@@ -17,10 +17,11 @@ from pathlib import Path
 
 import requests
 
-GEMINI_DEFAULT_MODEL = "gemini-3-flash-preview"
+# Стабильная (не preview) модель: preview-версии Google снимает и урезает без предупреждения.
+GEMINI_DEFAULT_MODEL = "gemini-3.5-flash"
 # Запасные модели на случай 404/429/503; переопределяются GEMINI_FALLBACK_MODELS в .env
-GEMINI_FALLBACKS = ["gemini-3.5-flash", "gemini-3.7-flash", "gemini-3.6-flash",
-                    "gemini-flash-latest", "gemini-3.1-pro-preview"]
+GEMINI_FALLBACKS = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.6-flash",
+                    "gemini-flash-latest", "gemini-3-flash-preview"]
 OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
 
 
@@ -64,7 +65,7 @@ class LLM:
     provider = "base"
 
     def __init__(self, model: str, *, cache_dir: Path | None = None, min_interval: float = 0.0,
-                 max_retries: int = 6, timeout: float = 240.0, temperature: float = 0.1,
+                 max_retries: int = 6, timeout: float = 600.0, temperature: float = 0.0,
                  verbose: bool = True):
         self.model = model
         self.cache_dir = cache_dir
