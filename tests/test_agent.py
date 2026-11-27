@@ -252,6 +252,11 @@ def test_rule_placeholder_dropped_only_when_llm_finding_survives():
     assert _drop_covered_placeholders(rule + [llm]) == [llm]
     # второй ревьюер отклонил находку модели — правило остаётся
     assert _drop_covered_placeholders(rule) == rule
+    # строка 4 лишь вспомогательная цитата находки про другое — правило остаётся
+    other = Finding(id="", scope="R-02", criterion="COR", severity="major", problem="p",
+                    recommendation="", question="",
+                    evidence=[Evidence("a", 9, 9, True), Evidence("q", 4, 4, True)])
+    assert _drop_covered_placeholders(rule + [other]) == rule + [other]
 
 
 def test_parse_json_handles_fences():

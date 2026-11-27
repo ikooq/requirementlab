@@ -20,6 +20,14 @@ def _cell(s: str, limit: int = 0) -> str:
     return s
 
 
+def _calls(res: RunResult) -> str:
+    if res.llm_calls == 0 and res.cache_hits:
+        return (f"{res.cache_hits}, все из кэша `.cache/llm`: ответы модели получены в предыдущем "
+                "прогоне этого же документа и этих же промптов, отчёт пересобран из них без новых "
+                f"запросов ({res.duration_s:.0f} с)")
+    return f"{res.llm_calls} (+{res.cache_hits} из кэша), {res.duration_s:.0f} с"
+
+
 def render(res: RunResult) -> str:
     doc = res.doc
     reqs = res.requirements
@@ -52,7 +60,7 @@ def render(res: RunResult) -> str:
         ("Версия агента", res.agent_version),
         ("Методика", "ISO/IEC/IEEE 29148:2018 п. 5.2.5 и 5.2.6; IEEE Std 830-1998 п. 4.3"),
         ("Шаги", "правила → нарезка → проверка требований → проверка набора → привязка цитат → второй ревьюер"),
-        ("Вызовы модели", f"{res.llm_calls} (+{res.cache_hits} из кэша), {res.duration_s:.0f} с"),
+        ("Вызовы модели", _calls(res)),
         ("Отсеяно находок", f"{len(res.dropped)} (неподтверждённая цитата или отклонено вторым ревьюером)"),
     ]
     for k, v in rows:

@@ -385,9 +385,12 @@ def doc_text(doc: Document, start: int, end: int) -> str:
 
 
 def _drop_covered_placeholders(findings: list[Finding]) -> list[Finding]:
-    """Находка правила «заглушка» (S-CMP) не нужна, если модель уже разобрала эту строку."""
-    covered = {ln for f in findings if f.source != "rule" for e in f.evidence
-               for ln in range(e.line_start, e.line_end + 1)}
+    """Находка правила «заглушка» (S-CMP) не нужна, если модель уже разобрала эту строку.
+
+    Считается только основное место находки модели (первая цитата): вспомогательная
+    цитата на ту же строку может быть про другую проблему."""
+    covered = {ln for f in findings if f.source != "rule"
+               for ln in range(f.evidence[0].line_start, f.evidence[0].line_end + 1)}
     return [f for f in findings if not (f.source == "rule" and f.criterion == "S-CMP"
                                         and f.evidence[0].line_start in covered)]
 
