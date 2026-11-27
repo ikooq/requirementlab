@@ -1580,5 +1580,8 @@
     "title": "Уведомление о расходах по карте",
     "sha256": "e7dae55e5453a250d93e335f5ff9c7f775f4457ccddd333f4a67e47b20d74381",
     "lines": 198
-  }
+  },
+  "passes": 1,
+  "batch_size": 12,
+  "requested_model": "gemini-3.5-flash"
 }

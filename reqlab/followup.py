@@ -111,6 +111,8 @@ quotes (включая цитату этой строки), question (какое
     result.model = f"{client.label} (дополнительное ревью)"
     result.stage_durations = {"followup": time.monotonic() - tick}
     result.duration_s = result.stage_durations["followup"]
+    result.passes = result.batch_size = None
+    result.requested_model = client.requested_model
     result.models_used = client.models_used
     result.llm_calls, result.retries = client.calls, client.retries
     result.request_log, result.cache_hits = client.request_log, client.cache_hits

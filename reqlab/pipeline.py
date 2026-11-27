@@ -88,6 +88,10 @@ class RunResult:
     retries: int = 0
     request_log: list[dict] = field(default_factory=list)
 
+    passes: int | None = None
+    batch_size: int | None = None
+    requested_model: str | None = None
+
     def to_json(self) -> dict:
         d = {k: v for k, v in asdict(self).items() if k != "doc"}
         d["started"] = self.started.isoformat(timespec="seconds")
@@ -208,6 +212,7 @@ class Agent:
             dropped=dropped, set_verdicts=set_verdicts, dev_ready=dev, test_ready=test,
             verdict_text=text, priority_fixes=fixes, llm_calls=self.llm.calls,
             cache_hits=self.llm.cache_hits, agent_version=self.agent_version,
+            passes=self.passes, batch_size=self.batch_size, requested_model=self.llm.requested_model,
             coverage_gaps=gaps, stage_durations=stages, models_used=list(self.llm.models_used),
             retries=getattr(self.llm, "retries", 0), request_log=list(self.llm.request_log))
 

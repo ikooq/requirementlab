@@ -61,6 +61,10 @@ def _head(w, res: RunResult, sev: Counter, limit: int, more: str) -> None:
       f"Требований: {len(res.requirements)}, нарушений: {len(res.findings)} "
       f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
     w("")
+    if res.requested_model and any(model != res.requested_model for model in res.models_used):
+        w(f"> **Использована запасная модель.** Запрошена {_cell(res.requested_model)}. "
+          f"Ответы получены от {_cell(', '.join(res.models_used))}.")
+        w("")
     if res.coverage_gaps:
         w("**Проверка неполна.** " + " ".join(res.coverage_gaps))
         w("")
@@ -132,6 +136,9 @@ def render(res: RunResult) -> str:
         ("Дата прогона", res.started.strftime("%d.%m.%Y %H:%M:%S") + " (UTC"
          + res.started.strftime("%z")[:3] + ":" + res.started.strftime("%z")[3:] + ")"),
         ("Модель", res.model),
+        ("Запрошенная модель", res.requested_model or "не записано"),
+        ("Число проходов", res.passes if res.passes is not None else "не записано"),
+        ("Требований в пакете", res.batch_size if res.batch_size is not None else "не записано"),
         ("Версия агента при формировании данных", res.agent_version),
         ("Оформление Markdown", "reqlab/report.py · SHA-256 исходника (UTF-8, LF) "
          + sha256(Path(__file__).read_text(encoding="utf-8").encode("utf-8")).hexdigest()),
