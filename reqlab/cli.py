@@ -6,6 +6,8 @@ import argparse
 import json
 import subprocess
 import sys
+import uuid
+import hashlib
 from pathlib import Path
 
 from . import __version__
@@ -62,7 +64,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="независимых проходов проверки, находки объединяются (по умолчанию 2; "
                         "1 — вдвое меньше запросов к модели)")
     p.add_argument("--no-verify", action="store_true", help="пропустить второго ревьюера")
-    p.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов модели")
+    cache = p.add_mutually_exclusive_group()
+    cache.add_argument("--fresh-run", action="store_true", help="начать чистый прогон с сохранением промежуточных ответов")
+    cache.add_argument("--continue-run", type=uuid.UUID, metavar="ID", help="продолжить сохранённый прогон")
+    cache.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов модели")
     p.add_argument("--brief", action="store_true",
                    help="дополнительно записать короткий отчёт на один экран (<отчёт>-brief.md)")
     p.add_argument("--quiet", action="store_true", help="не печатать ход прогона")
@@ -97,11 +102,32 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     version = agent_version()
+    agent = Agent(llm, batch_size=args.batch_size, verify=not args.no_verify,
+                  agent_version=version, verbose=verbose, passes=args.passes)
+    run_id = args.continue_run or (uuid.uuid4() if args.fresh_run else None)
+    if run_id:
+        directory = ROOT / ".cache" / "runs" / str(run_id)
+        manifest = directory / "settings.json"
+        settings = {
+            "document": doc.sha256, "model": llm.requested_model, "provider": llm.provider,
+            "endpoint_hash": hashlib.sha256(getattr(llm, "base_url", "").encode()).hexdigest(),
+            "passes": agent.passes, "batch_size": agent.batch_size, "verify": agent.verify,
+        }
+        try:
+            if args.continue_run:
+                if json.loads(manifest.read_text(encoding="utf-8")) != settings:
+                    raise ValueError("Документ или настройки отличаются от исходного прогона.")
+            else:
+                directory.mkdir(parents=True, exist_ok=False)
+                manifest.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+        except (OSError, ValueError) as e:
+            print(f"Ошибка сохранённого прогона: {e}", file=sys.stderr)
+            return 2
+        llm.cache_dir = directory
+        print(f"Для продолжения замените --fresh-run на --continue-run {run_id}", file=sys.stderr)
     if verbose:
         print(f"RequirementLab {version}: «{doc.title}» ({len(doc.lines)} строк), модель {llm.label}",
               file=sys.stderr)
-    agent = Agent(llm, batch_size=args.batch_size, verify=not args.no_verify,
-                  agent_version=version, verbose=verbose, passes=args.passes)
     try:
         result = agent.run(doc)
     except LLMError as e:

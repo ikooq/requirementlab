@@ -507,3 +507,29 @@ def test_batch_is_split_when_model_keeps_breaking_json(spec):
     assert llm.broken > 0
     assert all(r.verdicts for r in res.requirements)
     assert any(f.criterion == "VER" and f.severity == "critical" for f in res.findings)
+
+
+def test_cli_continues_interrupted_run_without_repeating_segmentation(tmp_path, spec, monkeypatch):
+    from reqlab import cli
+    from reqlab.llm import LLMError
+
+    monkeypatch.setattr(cli, "ROOT", tmp_path)
+    monkeypatch.setattr(cli, "_load_env", lambda: None)
+    class Interrupted(FakeLLM):
+        def _call(self, system, user):
+            if "проверить КАЖДОЕ" in user:
+                raise LLMError("daily quota")
+            return super()._call(system, user)
+
+    clients = iter([Interrupted(), FakeLLM(), FakeLLM()])
+    monkeypatch.setattr(cli, "from_env", lambda *args, **kwargs: next(clients))
+    out = tmp_path / "report.md"
+    args = [str(spec), str(out), "--passes", "1"]
+    assert cli.main([*args, "--fresh-run"]) == 3
+    assert not out.exists()
+    directory, = (tmp_path / ".cache" / "runs").iterdir()
+    assert cli.main([*args, "--continue-run", directory.name]) == 0
+    result = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+    assert result["cache_hits"] == 1
+    assert result["findings"]
+    assert cli.main([*args, "--continue-run", directory.name, "--no-verify"]) == 2

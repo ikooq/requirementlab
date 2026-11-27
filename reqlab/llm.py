@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import time
+import tempfile
 from pathlib import Path
 
 import requests
@@ -237,9 +238,15 @@ class LLM:
         if not self.cache_dir:
             return
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        (self.cache_dir / f"{key}.json").write_text(
-            json.dumps({"model": model, "response": data}, ensure_ascii=False, indent=1),
-            encoding="utf-8")
+        target = self.cache_dir / f"{key}.json"
+        with tempfile.NamedTemporaryFile(dir=self.cache_dir, delete=False) as stream:
+            temp = Path(stream.name)
+        try:
+            temp.write_text(json.dumps({"model": model, "response": data}, ensure_ascii=False),
+                            encoding="utf-8")
+            temp.replace(target)
+        finally:
+            temp.unlink(missing_ok=True)
 
     def _log(self, msg: str) -> None:
         if self.verbose:
