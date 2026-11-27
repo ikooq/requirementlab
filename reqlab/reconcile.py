@@ -63,7 +63,43 @@ def separate_rule_fixes(group, candidates):
     return result
 
 
-def reconcile(document, paths, llm):
+def review_groups(document, groups, candidates, llm):
+    """Review neighbouring findings together so the reviewer can compare their remedies."""
+    ordered = sorted(groups, key=lambda g: candidates[g[0]][1]["evidence"][0]["line_start"])
+    kept, discarded = [], []
+    for start in range(0, len(ordered), 14):
+        batch = ordered[start:start + 14]
+        facts = []
+        for number, members in enumerate(batch, 1):
+            finding = candidates[members[0]][1]
+            facts.append([number, finding["problem"], finding["recommendation"],
+                          [q["quote"] for q in finding["evidence"]]])
+        prompt = """Реши, что аналитик должен исправить в самом ТЗ. Для каждой находки проверь
+есть ли в документе конкретная причина и нужно ли отдельное изменение. Отклони предложение
+выбрать технологию без влияния на результат, требование повторить уже указанный формат и
+абстрактное «нет теста» без конкретной непокрытой ветки. Если для нескольких находок достаточно
+одной правки, оставь одну группу и первым поставь самый точный вариант. Разные незаполненные
+поля или разные виды нарушений требуют отдельных исправлений. При сомнениях проверь цитату
+в контексте всего документа. Ответ JSON: groups (группы номеров, включая одиночные), rejected
+(номера неподтверждённых кандидатов). Каждый номер используй ровно один раз.
+""" + document.numbered() + "\nКандидаты:\n" + json.dumps(facts, ensure_ascii=False)
+        for attempt in range(2):
+            reply = llm.complete_json(SYSTEM, prompt, step="проверка группы замечаний")
+            try:
+                accepted, rejected = partition(reply, len(batch))
+                break
+            except ValueError as error:
+                if attempt:
+                    raise
+                prompt += "\nИсправь ответ: " + str(error) + ". " + json.dumps(reply)
+        discarded.extend(i for n in rejected for i in batch[n - 1])
+        for group in accepted:
+            joined = [i for n in group for i in batch[n - 1]]
+            kept.extend(separate_rule_fixes(joined, candidates))
+    return kept, discarded
+
+
+def reconcile(document, paths, llm, thorough=False):
     candidates, rows, sources = {}, [], []
     for path in paths:
         raw = path.read_bytes()
@@ -100,6 +136,10 @@ def reconcile(document, paths, llm):
                 raise
             prompt += "\nИсправь распределение: " + str(error) + ". Предыдущий ответ: " + json.dumps(reply)
     groups = [part for group in groups for part in separate_rule_fixes(group, candidates)]
+    if thorough:
+        groups, removed = review_groups(document, groups, candidates, llm)
+        rejected = rejected + removed
+    partition({"groups": groups, "rejected": rejected}, len(candidates))
     findings = []
     for i, group in enumerate(groups, 1):
         _, best = candidates[group[0]]
@@ -111,7 +151,7 @@ def reconcile(document, paths, llm):
                     evidence.append(quote)
         findings.append(dict(item, id=f"F-{i:03}", evidence=evidence,
                              origins=[candidates[n][0] for n in group]))
-    return {"kind": "reconciled_findings", "document": {"name": document.name, "sha256": document.sha256},
+    return {"kind": "reconciled_findings", "thorough": thorough, "document": {"name": document.name, "sha256": document.sha256},
             "agent_version": agent_version(), "model": llm.label, "sources": sources,
             "findings": findings, "rejected": [candidates[n][0] for n in rejected]}
 
@@ -122,6 +162,7 @@ def main():
     parser.add_argument("reports", nargs="+", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--model")
+    parser.add_argument("--thorough", action="store_true", help="перепроверить небольшие группы соседних замечаний")
     args = parser.parse_args()
     paths = {path.resolve() for path in args.reports}
     if len(paths) != len(args.reports) or len(paths) < 2:
@@ -131,7 +172,7 @@ def main():
     _load_env()
     try:
         client = from_env(model=args.model, cache_dir=ROOT / ".cache" / "reconcile")
-        data = reconcile(load(args.document), args.reports, client)
+        data = reconcile(load(args.document), args.reports, client, args.thorough)
         args.output.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError, KeyError, LoadError, LLMError) as error:
         parser.exit(2, f"Ошибка сверки: {error}\n")
