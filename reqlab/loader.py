@@ -79,6 +79,57 @@ def _title(lines: list[str], p: Path) -> str:
 
 
 def _read_pdf(p: Path) -> tuple[list[str], dict[int, int]]:
+    """PDF: через PyMuPDF с восстановлением таблиц, иначе — простым текстом через pypdf."""
+    try:
+        import pymupdf  # noqa: F401
+    except ImportError:
+        return _read_pdf_plain(p)
+    try:
+        return _read_pdf_tables(p)
+    except Exception:  # noqa: BLE001 — нестандартный PDF: не падаем, читаем проще
+        return _read_pdf_plain(p)
+
+
+def _read_pdf_tables(p: Path) -> tuple[list[str], dict[int, int]]:
+    """Текст страниц по порядку сверху вниз; таблицы — строками «| a | b |».
+
+    У pypdf ячейки таблицы превращаются в текст без границ, многострочная ячейка
+    рвётся на отдельные строки, а пустые ячейки исчезают совсем — пропадают
+    незаполненные таблицы (например, блок согласующих). PyMuPDF находит таблицы
+    по линиям сетки и отдаёт ячейки целиком, включая пустые.
+    """
+    import contextlib
+    import io
+
+    import pymupdf
+
+    lines: list[str] = []
+    pages: dict[int, int] = {}
+    with pymupdf.open(str(p)) as pdf:
+        for page_no, page in enumerate(pdf, 1):
+            items: list[tuple[float, float, list[str]]] = []
+            boxes = []
+            with contextlib.redirect_stdout(io.StringIO()):  # PyMuPDF печатает советы в stdout
+                tables = page.find_tables().tables
+            for tab in tables:
+                box = pymupdf.Rect(tab.bbox)
+                boxes.append(box)
+                rows = ["| " + " | ".join(" ".join(str(c or "").split()) for c in row) + " |"
+                        for row in tab.extract()]
+                items.append((box.y0, box.x0, rows + [""]))
+            for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
+                centre = pymupdf.Point((x0 + x1) / 2, (y0 + y1) / 2)
+                if any(centre in b for b in boxes):
+                    continue
+                items.append((y0, x0, text.splitlines()))
+            for _, _, chunk in sorted(items, key=lambda it: (round(it[0], 1), it[1])):
+                for ln in chunk:
+                    lines.append(ln)
+                    pages[len(lines)] = page_no
+    return lines, pages
+
+
+def _read_pdf_plain(p: Path) -> tuple[list[str], dict[int, int]]:
     try:
         from pypdf import PdfReader
     except ImportError as e:  # pragma: no cover
