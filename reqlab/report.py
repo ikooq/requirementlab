@@ -139,6 +139,9 @@ def render(res: RunResult) -> str:
         ("Время по этапам", ", ".join(f"{k}: {v:.1f} с" for k, v in res.stage_durations.items())),
         ("Отсеяно находок", f"{len(res.dropped)} (неподтверждённая цитата или отклонено вторым ревьюером)"),
     ]
+    for parent in res.lineage:
+        rows.append(("Исходный отчёт", f"{parent['file']} · {parent['agent_version']} · "
+                     f"{parent['model']} · SHA-256 {parent['sha256']}"))
     for k, v in rows:
         w(f"| {k} | {_cell(v)} |")
     w("")

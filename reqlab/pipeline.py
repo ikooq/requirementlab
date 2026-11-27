@@ -84,6 +84,7 @@ class RunResult:
     stage_durations: dict[str, float] = field(default_factory=dict)
     models_used: list[str] = field(default_factory=list)
     coverage_gaps: list[str] | None = None
+    lineage: list[dict] = field(default_factory=list)
     retries: int = 0
     request_log: list[dict] = field(default_factory=list)
 
