@@ -84,6 +84,8 @@ def test_real_golden_is_valid(name):
     # эталон привязан к конкретному тексту: строки считаются по этому файлу
     from reqlab.loader import load
     document = root / golden["document"]
+    if not document.exists():
+        pytest.skip(f"{golden['document']} скачивается отдельно, см. README")
     doc = load(document)
     assert doc.sha256 == golden["sha256"]
     for d in golden["defects"]:
