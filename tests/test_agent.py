@@ -545,3 +545,17 @@ def test_type_conflict_cites_both_declarations_and_ignores_fenced_examples(tmp_p
     finding, = Agent(FakeLLM(), verbose=False)._rule_findings(hits)
     assert [(e.line_start, e.quote) for e in finding.evidence] == [
         (10, "| amount | string |"), (2, "| amount | integer |")]
+
+
+@pytest.mark.parametrize("clicked,other_screen,count", [
+    ("Отправить", "", 1), ("применить", "", 0),
+    ("Отправить", "На экране подтверждения кнопка «Отправить».", 0)])
+def test_acceptance_button_trace(tmp_path, clicked, other_screen, count):
+    path = tmp_path / "screen.md"
+    path.write_text(f"На экране настроек кнопка «Применить».\n{other_screen}\n"
+                    f"### Критерии приёмки\n| Пользователь нажимает «{clicked}» | Готово |\n"
+                    "### Пример\nНажимает «Назад».", encoding="utf-8")
+    hits = [h for h in rules.run(load(path)) if h.rule == "acceptance-button"]
+    assert len(hits) == count
+    if hits:
+        assert (hits[0].related_line[0], hits[0].line_start) == (1, 4)

@@ -95,6 +95,59 @@ def _type_mismatches(doc: Document) -> list[RuleHit]:
     return hits
 
 
+_SCREEN = re.compile(r"на (?:этом )?экране\b", re.I)
+_BUTTON = re.compile(r'кнопк[аиу]\s+[«"]([^»"]+)[»"]', re.I)
+_CLICK = re.compile(r'нажима(?:ет|ют|ть)\s+(?:кнопку\s+)?[«"]([^»"]+)[»"]', re.I)
+
+
+def _acceptance_buttons(doc: Document) -> list[RuleHit]:
+    """Compare explicit button names only when the document describes one screen."""
+    screens = []
+    actions = []
+    acceptance_level = 0
+    fence = ""
+    for number, line in enumerate(doc.lines, 1):
+        text = line.strip()
+        marker = re.match(r"^`{3,}|^~{3,}", text)
+        if marker:
+            if not fence:
+                fence = marker.group()
+            elif text.startswith(fence) and not text.strip(fence[0]):
+                fence = ""
+            continue
+        if fence:
+            continue
+        heading = re.match(r"^(#{1,6})\s+(.+)", text)
+        if heading:
+            level = len(heading[1])
+            if level <= acceptance_level:
+                acceptance_level = 0
+            if re.fullmatch(r"критерии при[её]мки", heading[2], re.I):
+                acceptance_level = level
+        elif acceptance_level:
+            actions.extend((number, text, name) for name in _CLICK.findall(text))
+        elif _SCREEN.search(text):
+            screens.append((number, text))
+
+    if len(screens) != 1:
+        return []
+    screen_line, description = screens[0]
+    buttons = _BUTTON.findall(description)
+    if not buttons:
+        return []
+    hits = []
+    known = {name.casefold() for name in buttons}
+    for number, text, name in actions:
+        if name.casefold() not in known:
+            hits.append(RuleHit(
+                "acceptance-button", "S-TRC", "minor", number, number, text,
+                f"Критерий приёмки требует нажать «{name}». В описании экрана указана "
+                f"кнопка «{'», «'.join(buttons)}». Уточните, какой элемент выполняет действие.",
+                "Согласовать подпись элемента или указать переход на другой экран.",
+                related_line=(screen_line, description)))
+    return hits
+
+
 def run(doc: Document) -> list[RuleHit]:
     hits: list[RuleHit] = []
     checkbox_lines: list[int] = []
@@ -132,6 +185,7 @@ def run(doc: Document) -> list[RuleHit]:
                 "empty-row", "DOC", "major", i, i, s,
                 "Пустая строка таблицы: данные не внесены.",
                 "Заполнить таблицу (например, ответственных и согласующих)."))
+    hits += _acceptance_buttons(doc)
     hits += _type_mismatches(doc)
     if checkbox_lines:
         a, b = checkbox_lines[0], checkbox_lines[-1]
