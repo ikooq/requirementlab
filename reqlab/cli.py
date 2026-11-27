@@ -18,11 +18,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def agent_version() -> str:
+    """Версия и коммит агента. «-dirty» — только если изменён код, а не отчёты в reports/."""
+    def git(*args: str) -> str:
+        out = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=5)
+        return out.stdout.strip() if out.returncode == 0 else ""
     try:
-        out = subprocess.run(["git", "describe", "--tags", "--always", "--dirty"], cwd=ROOT,
-                             capture_output=True, text=True, timeout=5)
-        if out.returncode == 0 and out.stdout.strip():
-            return f"v{__version__} (git {out.stdout.strip()})"
+        desc = git("describe", "--tags", "--always")
+        if desc:
+            if git("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)reports"):
+                desc += "-dirty"
+            return f"v{__version__} (git {desc})"
     except (OSError, subprocess.SubprocessError):
         pass
     return f"v{__version__}"
