@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import time
+import tempfile
 from pathlib import Path
 
 import requests
@@ -21,6 +22,7 @@ import requests
 GEMINI_DEFAULT_MODEL = "gemini-3.5-flash"
 # Запасные модели на случай 404/429/503; переопределяются GEMINI_FALLBACK_MODELS в .env
 GEMINI_FALLBACKS = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.6-flash",
+                    "gemini-3.5-flash-lite", "gemini-3.1-flash-lite",
                     "gemini-flash-latest", "gemini-3-flash-preview"]
 OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
 
@@ -57,7 +59,7 @@ class _Retryable(Exception):
         return self.status == 429 and (self.wait is None or self.wait > 65)
 
 
-def parse_json(text: str) -> dict:
+def parse_json(text: str, *, findings_only: bool = False) -> dict:
     text = text.strip()
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.S)
     if fence:
@@ -69,6 +71,16 @@ def parse_json(text: str) -> dict:
         if start < 0 or end <= start:
             raise ValueError("в ответе нет JSON-объекта")
         data = json.loads(text[start:end + 1])
+    if findings_only:
+        if isinstance(data, list):
+            data = {"findings": data}
+        items = data.get("findings") if isinstance(data, dict) else None
+        if not isinstance(items, list) or not all(
+                isinstance(item, dict) and isinstance(item.get("problem"), str)
+                and item["problem"].strip() and isinstance(item.get("quotes"), list)
+                and any(isinstance(q, str) and q.strip() for q in item["quotes"])
+                for item in items):
+            raise ValueError("ожидался список findings с описанием и цитатами")
     if not isinstance(data, dict):
         raise ValueError("ожидался JSON-объект")
     return data
@@ -93,6 +105,8 @@ class LLM:
         self.temperature = temperature
         self.verbose = verbose
         self.calls = 0          # реальные обращения к API
+        self.retries = 0
+        self.request_log = []
         self.cache_hits = 0
         self.models_used: list[str] = []
         # (номер ключа, модель) с исчерпанной дневной квотой
@@ -146,12 +160,22 @@ class LLM:
         attempt = 0
         # Лимит попыток считается на модель: переход на запасную модель даёт ей
         # полный набор попыток, иначе до последних запасных дело не доходит.
+        requests_made = 0
         while attempt < self.max_retries:
             attempt += 1
             self._throttle()
             try:
                 t0 = time.time()
-                text = self._call(system, prompt)
+                if requests_made:
+                    self.retries += 1
+                requests_made += 1
+                entry = {"step": step, "model": self.model, "retry": requests_made > 1}
+                self.request_log.append(entry)
+                start = time.monotonic()
+                try:
+                    text = self._call(system, prompt)
+                finally:
+                    entry["duration_s"] = round(time.monotonic() - start, 3)
                 self.calls += 1
                 if self.model not in self.models_used:
                     self.models_used.append(self.model)
@@ -174,7 +198,8 @@ class LLM:
                 time.sleep(wait)
                 continue
             try:
-                data = parse_json(text)
+                data = parse_json(text, findings_only=step.startswith(
+                    ("поиск противоречий", "поиск пропущенных сценариев")))
             except (ValueError, json.JSONDecodeError) as e:
                 last_err = f"невалидный JSON: {e}"
                 bad_json += 1
@@ -225,9 +250,15 @@ class LLM:
         if not self.cache_dir:
             return
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        (self.cache_dir / f"{key}.json").write_text(
-            json.dumps({"model": model, "response": data}, ensure_ascii=False, indent=1),
-            encoding="utf-8")
+        target = self.cache_dir / f"{key}.json"
+        with tempfile.NamedTemporaryFile(dir=self.cache_dir, delete=False) as stream:
+            temp = Path(stream.name)
+        try:
+            temp.write_text(json.dumps({"model": model, "response": data}, ensure_ascii=False),
+                            encoding="utf-8")
+            temp.replace(target)
+        finally:
+            temp.unlink(missing_ok=True)
 
     def _log(self, msg: str) -> None:
         if self.verbose:

@@ -58,6 +58,8 @@ class Finding:
     related: list[str] = field(default_factory=list)
     source: str = "llm"        # llm | rule
     reviewer_note: str = ""
+    analyst_decision: str = "pending"  # pending | accepted | rejected
+    analyst_note: str = ""
 
 
 @dataclass
@@ -79,6 +81,16 @@ class RunResult:
     llm_calls: int
     cache_hits: int
     agent_version: str
+    stage_durations: dict[str, float] = field(default_factory=dict)
+    models_used: list[str] = field(default_factory=list)
+    coverage_gaps: list[str] | None = None
+    lineage: list[dict] = field(default_factory=list)
+    retries: int = 0
+    request_log: list[dict] = field(default_factory=list)
+
+    passes: int | None = None
+    batch_size: int | None = None
+    requested_model: str | None = None
 
     def to_json(self) -> dict:
         d = {k: v for k, v in asdict(self).items() if k != "doc"}
@@ -116,14 +128,19 @@ class Agent:
     # ------------------------------------------------------------------
     def run(self, doc: Document) -> RunResult:
         started, t0 = datetime.now().astimezone(), time.time()
+        stages: dict[str, float] = {}
         loc = Locator(doc)
         numbered = doc.numbered()
 
         self.log("1/5 Детерминированные проверки…")
+        stage_t = time.time()
         hits = rules.run(doc)
+        stages["rules"] = time.time() - stage_t
 
         self.log("2/5 Нарезка требований…")
+        stage_t = time.time()
         reqs, acs, skipped = self._segment(doc, numbered, loc)
+        stages["segmentation"] = time.time() - stage_t
         self.log(f"    требований: {len(reqs)}, критериев приёмки: {len(acs)}")
 
         # Шаги 3–4 выполняются несколько раз независимо, находки объединяются.
@@ -132,9 +149,20 @@ class Agent:
         raw: list[dict] = []
         set_verdicts: dict[str, dict] = {}
         for n in range(1, self.passes + 1):
+            stage_t = time.time()
             pass_raw, pass_verdicts = self._review_pass(doc, numbered, reqs, acs, hits, n)
+            stages[f"review_pass_{n}"] = time.time() - stage_t
             raw += pass_raw
             set_verdicts = _merge_set_verdicts(set_verdicts, pass_verdicts)
+
+        # Capture model coverage before reconciling the matrix with grounded findings.
+        gaps = [] if reqs else ["Нарезка не выделила ни одного требования."]
+        for requirement in reqs:
+            if not any(v in ("pass", "fail", "na") for v in requirement.verdicts.values()):
+                gaps.append(f"{requirement.id}: отсутствует оценка критериев.")
+        for criterion in SET:
+            if set_verdicts.get(criterion.code, {}).get("status", "unknown") == "unknown":
+                gaps.append(f"{criterion.code}: нет оценки набора требований.")
 
         findings, dropped = self._ground(raw, loc)
         findings += self._rule_findings(hits)
@@ -151,7 +179,9 @@ class Agent:
         dev, test, text, fixes = "", "", "", []
         if self.verify and findings:
             self.log("5/5 Второй ревьюер: отсев ложных находок и итог…")
+            stage_t = time.time()
             dev, test, text, fixes, more_dropped = self._critic(doc, numbered, findings)
+            stages["critic"] = time.time() - stage_t
             dropped += more_dropped
             findings = [f for f in findings if f.id not in {d["id"] for d in more_dropped}]
             # Дубли правил снимаем только после второго ревьюера: если он отклонил
@@ -172,12 +202,19 @@ class Agent:
             self._reconcile_verdicts(reqs, findings)
         dev, test = _gate(findings, acs, dev, test)
 
+        if gaps:
+            dev = "conditional" if dev == "yes" else dev
+            test = "conditional" if test == "yes" else test
+
         return RunResult(
             doc=doc, model=self.llm.label, started=started, duration_s=time.time() - t0,
             requirements=reqs, acceptance=acs, skipped=skipped, findings=findings,
             dropped=dropped, set_verdicts=set_verdicts, dev_ready=dev, test_ready=test,
             verdict_text=text, priority_fixes=fixes, llm_calls=self.llm.calls,
-            cache_hits=self.llm.cache_hits, agent_version=self.agent_version)
+            cache_hits=self.llm.cache_hits, agent_version=self.agent_version,
+            passes=self.passes, batch_size=self.batch_size, requested_model=self.llm.requested_model,
+            coverage_gaps=gaps, stage_durations=stages, models_used=list(self.llm.models_used),
+            retries=getattr(self.llm, "retries", 0), request_log=list(self.llm.request_log))
 
     # --- шаг 2: нарезка ----------------------------------------------
     def _segment(self, doc: Document, numbered: str, loc: Locator):
@@ -224,10 +261,14 @@ class Agent:
             r.id = f"R-{n:02d}"
 
         acs = []
-        for n, item in enumerate(data.get("acceptance_criteria") or [], 1):
+        for item in data.get("acceptance_criteria") or []:
             quote = str(item.get("quote") or "").strip()
             m = loc.find(quote, _int(item.get("line"))) if quote else None
-            acs.append({"id": f"AC-{n}", "line": m.start if m else _int(item.get("line")),
+            if not m:
+                continue
+            if not m.exact:
+                quote = doc_text(doc, m.start, m.end)
+            acs.append({"id": f"AC-{len(acs) + 1}", "line": m.start,
                         "quote": quote, "summary": str(item.get("summary") or "")})
         skipped = [s for s in (data.get("skipped") or []) if isinstance(s, dict)]
         return reqs, acs, skipped
@@ -269,7 +310,7 @@ class Agent:
         return self.llm.complete_json(prompts.SYSTEM, user + self._note, step=step + tag)
 
     # --- шаг 3: проверка требований ------------------------------------
-    def _check_batch(self, doc, numbered, reqs, batch, hits) -> list[dict]:
+    def _check_batch(self, doc, numbered, reqs, batch, hits, *, recover=True) -> list[dict]:
         lines = set()
         for r in batch:
             lines.update(range(r.line_start, r.line_end + 1))
@@ -279,6 +320,8 @@ class Agent:
             criteria=prompts.individual_criteria(), severity=prompts.CHECK_GUIDE,
             hints=hint_txt, all_reqs=_req_list(reqs), targets=_req_targets(batch),
             title=doc.title, doc=numbered)
+        if not recover:
+            user += "\nПроверь каждый указанный идентификатор: предыдущий ответ пропустил эти требования."
         try:
             data = self._ask(user, f"проверка {batch[0].id}…{batch[-1].id}")
         except LLMBadJSON as e:
@@ -289,22 +332,29 @@ class Agent:
             mid = len(batch) // 2
             self.log(f"    пакет {batch[0].id}…{batch[-1].id} делю пополам: модель не дала "
                      "корректный JSON")
-            return (self._check_batch(doc, numbered, reqs, batch[:mid], hits)
-                    + self._check_batch(doc, numbered, reqs, batch[mid:], hits))
+            return (self._check_batch(doc, numbered, reqs, batch[:mid], hits, recover=recover)
+                    + self._check_batch(doc, numbered, reqs, batch[mid:], hits, recover=recover))
         by_id = {r.id: r for r in batch}
         out: list[dict] = []
+        reviewed = set()
         for res in data.get("results") or []:
             r = by_id.get(str(res.get("req_id") or "").strip())
             if not r:
                 continue
             verdicts = res.get("verdicts") or {}
             new = {c.code: _verdict(verdicts.get(c.code)) for c in INDIVIDUAL}
+            if any(v != "unknown" for v in new.values()):
+                reviewed.add(r.id)
             r.verdicts = _merge_verdicts(r.verdicts, new)
             for f in res.get("findings") or []:
                 out.append({**f, "scope": r.id, "_hint": r.line_start})
-        missing = [r.id for r in batch if not r.verdicts]
+        missing = [r for r in batch if r.id not in reviewed]
         if missing:
-            self.log(f"    модель не вернула вердикты для {', '.join(missing)}")
+            self.log("    модель пропустила: " + ", ".join(r.id for r in missing))
+            if recover:
+                for offset in range(0, len(missing), 3):
+                    out.extend(self._check_batch(doc, numbered, reqs, missing[offset:offset + 3],
+                                                 hits, recover=False))
         return out
 
     # --- шаг 4: проверка набора ----------------------------------------
@@ -386,9 +436,13 @@ class Agent:
         for h in hits:
             if h.rule == "vague-word":
                 continue  # размытые слова — только подсказка модели, без отдельной находки
+            evidence = [Evidence(h.quote, h.line_start, h.line_end, True)]
+            if h.related_line:
+                line, quote = h.related_line
+                evidence.append(Evidence(quote, line, line, True))
             out.append(Finding(id="", scope="SET", criterion=h.criterion, severity=h.severity,
                                problem=h.problem, recommendation=h.recommendation, question="",
-                               evidence=[Evidence(h.quote, h.line_start, h.line_end, True)],
+                               evidence=evidence,
                                source="rule"))
         return out
 
@@ -414,7 +468,7 @@ class Agent:
         for f in findings:
             q = " | ".join(f"«{e.quote[:160]}» (стр. {e.line_start})" for e in f.evidence)
             lines.append(f"- {f.id} [{f.scope}, {f.criterion}, {f.severity}, {f.source}] "
-                         f"{f.problem} Цитаты: {q}")
+                         f"{f.problem} Предложенная правка: {f.recommendation} Вопрос: {f.question} Цитаты: {q}")
         user = prompts.CRITIC.format(severity=prompts.SEVERITY_GUIDE, findings="\n".join(lines),
                                      title=doc.title, doc=numbered)
         data = self.llm.complete_json(prompts.SYSTEM, user, step="второй ревьюер")
@@ -431,7 +485,15 @@ class Agent:
                 if not target:
                     m = re.search(r"дубл\w*\s+(F-\d{3})", reason, re.I)
                     target = m.group(1) if m else ""
-                if target in by_id and target != f.id:
+                if target:
+                    if target not in by_id or target == f.id:
+                        continue
+                    # Contradictory behaviour and missing coverage require distinct fixes.
+                    conflict = {"S-CON", "COR"}
+                    coverage = {"TRC", "S-TRC", "S-VAL", "VER"}
+                    pair = {f.criterion, by_id[target].criterion}
+                    if pair & conflict and pair & coverage:
+                        continue
                     dup_of[f.id] = target
                 dropped.append({"id": f.id, "scope": f.scope, "criterion": f.criterion,
                                 "reason": reason or "отклонено вторым ревьюером",
@@ -443,6 +505,7 @@ class Agent:
                 f.severity = sev
         # Дубликат не теряется: его цитаты и связи переходят к оставленной находке.
         gone = {d["id"] for d in dropped}
+        merged = {}
         for src, dst in dup_of.items():
             seen = {src}
             while dst in gone and dst in dup_of and dst not in seen:  # цепочка дубликатов
@@ -450,13 +513,16 @@ class Agent:
                 dst = dup_of[dst]
             if dst in gone:
                 continue
+            merged[src] = dst
             _absorb(by_id[dst], by_id[src])
             for d in dropped:
                 if d["id"] == src:
                     d["reason"] = f"объединена с {dst}. {d['reason']}".strip()
+        # A duplicate can only disappear when there is a surviving original.
+        dropped = [d for d in dropped if d["id"] not in dup_of or d["id"] in merged]
         fixes = []
         for p in data.get("priority_fixes") or []:
-            ids = [i for i in (p.get("finding_ids") or []) if i in by_id]
+            ids = list(dict.fromkeys(merged.get(i, i) for i in (p.get("finding_ids") or []) if i in by_id))
             if p.get("action"):
                 fixes.append({"action": str(p["action"]), "finding_ids": ids})
         return (str(data.get("dev_ready") or ""), str(data.get("test_ready") or ""),
@@ -528,18 +594,20 @@ def _dedupe(findings: list[Finding]) -> list[Finding]:
     Почти одинаковые — основное место (первая цитата) на тех же строках и описания
     проблемы совпадают по словам хотя бы наполовину. Так склеиваются повторы из двух
     проходов, а разные дефекты на одной строке остаются разными."""
-    seen, out = set(), []
-    for f in findings:
-        key = (f.scope, f.criterion, f.evidence[0].line_start, f.problem[:50].lower())
-        if key in seen:
-            continue
-        twin = next((g for g in out if g.source == f.source == "llm" and _same_place(g, f)
-                     and _similar(g.problem, f.problem) >= 0.5), None)
-        if twin:
-            _absorb(twin, f)
-            continue
-        seen.add(key)
-        out.append(f)
+    out: list[Finding] = []
+    for finding in findings:
+        # A shared opening or source line is not enough to establish a duplicate.
+        for previous in out:
+            if (previous.scope != finding.scope or previous.source != finding.source
+                    or previous.criterion != finding.criterion or not _same_place(previous, finding)):
+                continue
+            same_text = previous.problem.strip().casefold() == finding.problem.strip().casefold()
+            if same_text or (finding.source == "llm" and _similar(previous.problem, finding.problem) >= 0.5
+                             and previous.problem[:50].casefold() != finding.problem[:50].casefold()):
+                _absorb(previous, finding)
+                break
+        else:
+            out.append(finding)
     return out
 
 

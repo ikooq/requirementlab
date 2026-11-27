@@ -1,0 +1,2173 @@
+{
+  "model": "gemini / gemini-3.5-flash-lite",
+  "started": "2026-11-27T20:18:06+05:00",
+  "duration_s": 149.52454710006714,
+  "requirements": [
+    {
+      "id": "R-01",
+      "doc_id": "Ф-1",
+      "section": "Функциональные требования",
+      "line_start": 37,
+      "line_end": 37,
+      "quote": "Ф-1. Держатель активной карты KZT задаёт целый порог от 1 000 до 1 000 000 ₸ включительно. По умолчанию уведомление выключено.",
+      "summary": "Установка порога расходов и значения по умолчанию",
+      "kind": "functional",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-02",
+      "doc_id": "Ф-2",
+      "section": "Функциональные требования",
+      "line_start": 38,
+      "line_end": 38,
+      "quote": "Ф-2. Месяц определяется по дате совершения покупки в Алматы. В расходы входят проведённые покупки. Возврат уменьшает расходы месяца исходной покупки. Переводы и снятие наличных исключаются.",
+      "summary": "Правила расчёта месячных расходов по карте",
+      "kind": "functional",
+      "verdicts": {
+        "NEC": "unknown",
+        "APP": "unknown",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "unknown",
+        "FEA": "unknown",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "unknown",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-03",
+      "doc_id": "Ф-3",
+      "section": "Функциональные требования",
+      "line_start": 39,
+      "line_end": 39,
+      "quote": "Ф-3. Когда расходы переходят от суммы ниже порога к сумме, равной порогу или выше, клиент получает push. На карту приходится максимум один такой push за календарный месяц.",
+      "summary": "Условия отправки push-уведомления о достижении порога",
+      "kind": "functional",
+      "verdicts": {
+        "NEC": "unknown",
+        "APP": "unknown",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "unknown",
+        "FEA": "unknown",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "unknown",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-04",
+      "doc_id": "Ф-4",
+      "section": "Функциональные требования",
+      "line_start": 40,
+      "line_end": 40,
+      "quote": "Ф-4. При изменении порога накопленная сумма сохраняется. Если она ниже нового порога, следующее достижение вызывает push независимо от истории предыдущей настройки.",
+      "summary": "Поведение накопленной суммы при изменении порога",
+      "kind": "functional",
+      "verdicts": {
+        "NEC": "unknown",
+        "APP": "unknown",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "unknown",
+        "FEA": "unknown",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "unknown",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-05",
+      "doc_id": null,
+      "section": "Нефункциональные требования",
+      "line_start": 46,
+      "line_end": 46,
+      "quote": "Сервис передаёт push на отправку в течение минуты после получения события.",
+      "summary": "Время доставки push-уведомления",
+      "kind": "nonfunctional",
+      "verdicts": {
+        "NEC": "unknown",
+        "APP": "unknown",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "unknown",
+        "FEA": "unknown",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "unknown",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-06",
+      "doc_id": null,
+      "section": "Требования к данным",
+      "line_start": 49,
+      "line_end": 49,
+      "quote": "Хранить идентификатор карты, месяц, идентификатор операции, сумму покупки в тиынах, признак отправки и порог в тенге.",
+      "summary": "Перечень сохраняемых данных о расходах и настройках",
+      "kind": "data",
+      "verdicts": {
+        "NEC": "unknown",
+        "APP": "unknown",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "unknown",
+        "FEA": "unknown",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "unknown",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-07",
+      "doc_id": null,
+      "section": "Требования к интеграции",
+      "line_start": 52,
+      "line_end": 52,
+      "quote": "Приложение читает и сохраняет настройки через дочерний документ «Уведомление о расходах по карте — REST API». Повторная доставка одного события процессинга сохраняет исходный итог.",
+      "summary": "Интеграция настроек и идемпотентность событий процессинга",
+      "kind": "integration",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-08",
+      "doc_id": null,
+      "section": "Логика работы метода",
+      "line_start": 117,
+      "line_end": 117,
+      "quote": "1. Проверить пользовательскую сессию.",
+      "summary": "Проверка пользовательской сессии в методе сохранения",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "fail",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "fail",
+        "COR": "fail",
+        "CNF": "pass",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-09",
+      "doc_id": null,
+      "section": "Логика работы метода",
+      "line_start": 118,
+      "line_end": 118,
+      "quote": "2. Проверить принадлежность карты клиенту.",
+      "summary": "Проверка принадлежности карты клиенту",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "fail",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "fail",
+        "COR": "fail",
+        "CNF": "pass",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-10",
+      "doc_id": null,
+      "section": "Логика работы метода",
+      "line_start": 119,
+      "line_end": 119,
+      "quote": "3. Проверить сумму и переключатель.",
+      "summary": "Проверка суммы и переключателя",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "fail",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "fail",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "unknown"
+      }
+    },
+    {
+      "id": "R-11",
+      "doc_id": null,
+      "section": "Логика работы метода",
+      "line_start": 120,
+      "line_end": 120,
+      "quote": "4. Заменить настройку и вернуть результат сохранения.",
+      "summary": "Сохранение настройки и возврат результата",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-12",
+      "doc_id": null,
+      "section": "Логика работы метода",
+      "line_start": 121,
+      "line_end": 121,
+      "quote": "5. При отклонении суммы вернуть прежнее состояние и результат ERROR.",
+      "summary": "Откат состояния при отклонении суммы",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-13",
+      "doc_id": null,
+      "section": "Особые правила",
+      "line_start": 124,
+      "line_end": 124,
+      "quote": "1. Целое число тенге, обе границы включены.",
+      "summary": "Требования к формату пороговой суммы",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-14",
+      "doc_id": null,
+      "section": "Особые правила",
+      "line_start": 125,
+      "line_end": 125,
+      "quote": "2. Повторное сохранение заменяет действующую настройку.",
+      "summary": "Правило перезаписи существующей настройки",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-15",
+      "doc_id": null,
+      "section": "Особые правила",
+      "line_start": 126,
+      "line_end": 126,
+      "quote": "3. Изменение порога сохраняет накопленные расходы.",
+      "summary": "Сохранение накопленных расходов при смене порога",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-16",
+      "doc_id": null,
+      "section": "Параметр cardId",
+      "line_start": 142,
+      "line_end": 142,
+      "quote": "| `cardId` | string | 1–64 | Да | Карта клиента | Идентификатор карты | `card_id` |",
+      "summary": "Параметр запроса cardId",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-17",
+      "doc_id": null,
+      "section": "Параметр amount",
+      "line_start": 143,
+      "line_end": 143,
+      "quote": "| `amount` | integer | 32 bit | Да | 1 000–1 000 000 | Порог в тенге | `limit_kzt` |",
+      "summary": "Параметр запроса amount",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-18",
+      "doc_id": null,
+      "section": "Параметр enabled",
+      "line_start": 144,
+      "line_end": 144,
+      "quote": "| `enabled` | integer | 1 знак | Да | 0 или 1 | Признак включения | `enabled` |",
+      "summary": "Параметр запроса enabled",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-19",
+      "doc_id": null,
+      "section": "Request body",
+      "line_start": 147,
+      "line_end": 147,
+      "quote": "* **Content-Type:** `application/json` .",
+      "summary": "Тип контента запроса",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "unknown",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "unknown",
+        "VER": "pass",
+        "COR": "fail",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-20",
+      "doc_id": null,
+      "section": "Request body",
+      "line_start": 148,
+      "line_end": 148,
+      "quote": "* Тело не используется.",
+      "summary": "Тело запроса не используется",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-21",
+      "doc_id": null,
+      "section": "Ответ",
+      "line_start": 151,
+      "line_end": 151,
+      "quote": "Если результат 200 или 201 — успешный. Если результат 400, 401 и далее — неуспешный.",
+      "summary": "Общие правила статусов ответа",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "unknown",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "fail",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-22",
+      "doc_id": null,
+      "section": "Параметр result",
+      "line_start": 155,
+      "line_end": 155,
+      "quote": "| `result` | string | OK / ERROR | Исход сохранения | — |",
+      "summary": "Параметр ответа result",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-23",
+      "doc_id": null,
+      "section": "Параметр amount",
+      "line_start": 156,
+      "line_end": 156,
+      "quote": "| `amount` | string | При успехе | Порог в тенге | `limit_kzt` |",
+      "summary": "Параметр ответа amount",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "unknown",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-24",
+      "doc_id": null,
+      "section": "Параметр enabled",
+      "line_start": 157,
+      "line_end": 157,
+      "quote": "| `enabled` | string | «0» или «1» | Признак включения | `enabled` |",
+      "summary": "Параметр ответа enabled",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "unknown",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    },
+    {
+      "id": "R-25",
+      "doc_id": null,
+      "section": "Параметр message",
+      "line_start": 158,
+      "line_end": 158,
+      "quote": "| `message` | string | При ошибке | Описание ошибки | — |",
+      "summary": "Параметр ответа message",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "unknown",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-26",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 162,
+      "line_end": 162,
+      "quote": "**200.** Ответ в случае успешного выполнения метода.",
+      "summary": "Описание статуса 200",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "fail",
+        "CMP": "unknown",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "unknown",
+        "COR": "unknown",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-27",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 163,
+      "line_end": 163,
+      "quote": "**400.** Ответ в случае, если параметры запроса заполнены неверно.",
+      "summary": "Описание статуса 400",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-28",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 174,
+      "line_end": 174,
+      "quote": "**401.** Ответ в случае, если запрос выполнен без необходимой авторизации.",
+      "summary": "Описание статуса 401",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-29",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 175,
+      "line_end": 175,
+      "quote": "**403.** Ответ в случае, если на указанный ресурс доступ запрещен.",
+      "summary": "Описание статуса 403",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "unknown",
+        "CMP": "unknown",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "unknown",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-30",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 176,
+      "line_end": 176,
+      "quote": "**500.** Ответ в случае, если произошла внутренняя ошибка сервера.",
+      "summary": "Описание статуса 500",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "pass",
+        "CNF": "pass",
+        "TRC": "fail"
+      }
+    },
+    {
+      "id": "R-31",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 189,
+      "line_end": 189,
+      "quote": "Для чужой карты возвращается 404, как и для отсутствующей карты.",
+      "summary": "Код ответа при запросе чужой или отсутствующей карты",
+      "kind": "api",
+      "verdicts": {
+        "NEC": "pass",
+        "APP": "pass",
+        "UNA": "pass",
+        "CMP": "pass",
+        "SNG": "pass",
+        "FEA": "pass",
+        "VER": "pass",
+        "COR": "fail",
+        "CNF": "pass",
+        "TRC": "pass"
+      }
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC-1",
+      "line": 63,
+      "quote": "| Расходы 48 500 ₸, порог 50 000 ₸ | Провести покупку на 1 500 ₸ | Итог 50 000 ₸ и один push |",
+      "summary": "Проверка отправки push при достижении порога"
+    },
+    {
+      "id": "AC-2",
+      "line": 64,
+      "quote": "| Покупка 31 января в 23:58 на 4 000 ₸ | Провести 1 февраля в 00:03 по Алматы | Февральский счётчик вырос на 4 000 ₸ |",
+      "summary": "Проверка учёта покупки по часовому поясу Алматы"
+    },
+    {
+      "id": "AC-3",
+      "line": 65,
+      "quote": "| Расходы 19 900 ₸, порог 20 000 ₸ | Перевести 500 ₸ | Счётчик показывает 19 900 ₸ |",
+      "summary": "Проверка исключения переводов из расходов"
+    }
+  ],
+  "skipped": [
+    {
+      "section": "Заголовок и метаданные документа",
+      "reason": "Заголовок и служебные примечания документа"
+    },
+    {
+      "section": "Общие сведения",
+      "reason": "Таблица паспорта задачи"
+    },
+    {
+      "section": "Цели",
+      "reason": "Бизнес-цели проекта"
+    },
+    {
+      "section": "Архитектура решения",
+      "reason": "Обзорная архитектурная схема компонентов"
+    },
+    {
+      "section": "Дизайн процесса UI",
+      "reason": "Описание пользовательского интерфейса"
+    },
+    {
+      "section": "BPMN схема процесса",
+      "reason": "Описание бизнес-процесса"
+    },
+    {
+      "section": "Sequence Diagram",
+      "reason": "Текстовое описание последовательности взаимодействия"
+    },
+    {
+      "section": "Требования к тестированию",
+      "reason": "Заглушка раздела тестирования"
+    },
+    {
+      "section": "Ревью требований",
+      "reason": "Чек-лист ревью документа"
+    },
+    {
+      "section": "Блок согласующих",
+      "reason": "Таблица согласования"
+    },
+    {
+      "section": "Часть B. Общие параметры",
+      "reason": "Паспорт REST API метода"
+    },
+    {
+      "section": "Схема",
+      "reason": "Схема взаимодействия для API"
+    },
+    {
+      "section": "Статусы примеров ответов",
+      "reason": "Примеры JSON-ответов и схемы примеров"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "scope": "R-01",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Требование не трассируется на критерии приёмки или тесты: в таблице критериев приёмки (строки 61-65) отсутствуют сценарии на проверку нижней границы (1 000 ₸), верхней границы (1 000 000 ₸), значения вне диапазона и дефолтного состояния (выключено).",
+      "recommendation": "Добавить в раздел «Критерии приёмки» строки с проверкой граничных значений порога и состояния по умолчанию.",
+      "question": "Каковы ожидаемые результаты системы при попытке установить порог ниже 1 000 ₸ и выше 1 000 000 ₸?",
+      "evidence": [
+        {
+          "quote": "* **Ф-1.** Держатель активной карты KZT задаёт целый порог от 1 000 до 1 000 000 ₸ включительно. По умолчанию уведомление выключено.",
+          "line_start": 37,
+          "line_end": 37,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-002",
+      "scope": "R-07",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Для требования интеграции не указаны критерии приёмки или тесты для проверки повторной доставки событий процессинга.",
+      "recommendation": "Добавить критерий приёмки для проверки идемпотентности обработки событий процессинга.",
+      "question": "Как именно тестировщику подтвердить сохранение исходного итога при повторной доставке события?",
+      "evidence": [
+        {
+          "quote": "Приложение читает и сохраняет настройки через дочерний документ «Уведомление о расходах по карте — REST API». Повторная доставка одного события процессинга сохраняет исходный итог.",
+          "line_start": 52,
+          "line_end": 52,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-003",
+      "scope": "R-08",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Изменение настроек (сохранение порога) спроектировано через HTTP GET (строка 104), что противоречит требованиям безопасности и идемпотентности модифицирующих запросов.",
+      "recommendation": "Изменить HTTP-метод в Части B с GET на POST или PUT.",
+      "question": "Почему для сохранения настроек используется метод GET вместо POST/PUT?",
+      "evidence": [
+        {
+          "quote": "**REST type** | GET",
+          "line_start": 104,
+          "line_end": 104,
+          "exact": true
+        },
+        {
+          "quote": "1. Проверить пользовательскую сессию.",
+          "line_start": 117,
+          "line_end": 117,
+          "exact": true
+        },
+        {
+          "quote": "* **Request URL** | Dev: `/alerts/saveLimit` . Prod: —",
+          "line_start": 108,
+          "line_end": 108,
+          "exact": true
+        },
+        {
+          "quote": "* Тело не используется.",
+          "line_start": 148,
+          "line_end": 148,
+          "exact": true
+        },
+        {
+          "quote": "```json\n{\"result\":\"ERROR\",\"message\":\"Проверьте сумму\"}\n```",
+          "line_start": 170,
+          "line_end": 171,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-08",
+        "R-19",
+        "R-26"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-004",
+      "scope": "R-08",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не указаны условия и правила проверки пользовательской сессии (где хранится токен, какие статусы возвращаются при истечении сессии).",
+      "recommendation": "Уточнить механику проверки сессии и сослаться на код ошибки 401.",
+      "question": "Что именно считается невалидной сессией и какой код ответа должен возвращаться?",
+      "evidence": [
+        {
+          "quote": "1. Проверить пользовательскую сессию.",
+          "line_start": 117,
+          "line_end": 117,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-005",
+      "scope": "R-08",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не описаны исключения и поведение системы при отсутствии сессии.",
+      "recommendation": "Описать сценарий отклонения запроса при невалидной сессии.",
+      "question": "Какое тело ответа возвращается при ошибке проверки сессии?",
+      "evidence": [
+        {
+          "quote": "1. Проверить пользовательскую сессию.",
+          "line_start": 117,
+          "line_end": 117,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-006",
+      "scope": "R-08",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Шаг сформулирован абстрактно, отсутствует измеримый результат для проверки.",
+      "recommendation": "Дописать ожидаемый результат проверки сессии.",
+      "question": "Как проверяется данный шаг во время тестирования?",
+      "evidence": [
+        {
+          "quote": "1. Проверить пользовательскую сессию.",
+          "line_start": 117,
+          "line_end": 117,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-007",
+      "scope": "R-09",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Маскировка чужой карты под несуществующую (возврат 404 вместо 403) противоречит описанию статуса 403 (строка 175) и нарушает требования информационной безопасности по разграничению доступа.",
+      "recommendation": "Исправить код ответа для чужой карты на 403 Forbidden.",
+      "question": "Почему для чужой карты возвращается 404 вместо 403?",
+      "evidence": [
+        {
+          "quote": "Для чужой карты возвращается 404, как и для отсутствующей карты.",
+          "line_start": 189,
+          "line_end": 189,
+          "exact": true
+        },
+        {
+          "quote": "{\"message\":\"Карта не найдена\"}",
+          "line_start": 192,
+          "line_end": 192,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-008",
+      "scope": "R-09",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не определены критерии и источники данных для проверки принадлежности карты клиенту из сессии.",
+      "recommendation": "Уточнить алгоритм сверки идентификатора карты из запроса с картами авторизованного клиента.",
+      "question": "Какая ошибка возвращается, если карта не принадлежит клиенту?",
+      "evidence": [
+        {
+          "quote": "2. Проверить принадлежность карты клиенту.",
+          "line_start": 118,
+          "line_end": 118,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-009",
+      "scope": "R-09",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "В логике работы метода не указан переход на статус 404 при чужой карте, хотя в блоке статусов это описано, что создает неполноту шагов алгоритма.",
+      "recommendation": "Дополнить шаг проверки принадлежности карты указанием возврата ошибки 404 для чужой карты.",
+      "question": "На каком подшаге фиксируется чужая карта и формируется ответ 404?",
+      "evidence": [
+        {
+          "quote": "2. Проверить принадлежность карты клиенту.",
+          "line_start": 118,
+          "line_end": 118,
+          "exact": true
+        },
+        {
+          "quote": "Для чужой карты возвращается 404, как и для отсутствующей карты.",
+          "line_start": 189,
+          "line_end": 189,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-010",
+      "scope": "R-09",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствует проверяемый критерий для сценария чужой карты в логике работы.",
+      "recommendation": "Добавить измеримый результат проверки принадлежности карты.",
+      "question": "Как тестировщику убедиться, что проверка отработала корректно?",
+      "evidence": [
+        {
+          "quote": "2. Проверить принадлежность карты клиенту.",
+          "line_start": 118,
+          "line_end": 118,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-011",
+      "scope": "R-10",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не указаны допустимые диапазоны и форматы для суммы и переключателя прямо в логике метода (они разбросаны по другим разделам).",
+      "recommendation": "Добавить ссылки на границы диапазона (1 000 – 1 000 000) и допустимые значения переключателя (0 или 1).",
+      "question": "Какие именно граничные значения проверяются на этом шаге?",
+      "evidence": [
+        {
+          "quote": "3. Проверить сумму и переключатель.",
+          "line_start": 119,
+          "line_end": 119,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-012",
+      "scope": "R-10",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствует описание того, что именно возвращается при некорректной сумме или переключателе.",
+      "recommendation": "Указать в шаге переход на обработку ошибки с возвратом результата ERROR.",
+      "question": "Какой ответ возвращает система при неверном значении переключателя?",
+      "evidence": [
+        {
+          "quote": "3. Проверить сумму и переключатель.",
+          "line_start": 119,
+          "line_end": 119,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-013",
+      "scope": "R-19",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Требование наличия Content-Type: application/json противоречит факту отправки параметров через query-строку в cURL-примере и отсутствию тела запроса.",
+      "recommendation": "Исключить требование о Content-Type либо перевести метод на отправку данных в теле (вместе со сменой метода на POST/PUT).",
+      "question": "Какой именно формат передачи данных предполагается для этого метода?",
+      "evidence": [
+        {
+          "quote": "* **REST type** | GET",
+          "line_start": 104,
+          "line_end": 104,
+          "exact": true
+        },
+        {
+          "quote": "* **CURL** | `curl -G \"$BASE/alerts/saveLimit\" -H \"Authorization: Bearer $TOKEN\" --data 'cardId=demo-42&amount=50000&enabled=1'`",
+          "line_start": 109,
+          "line_end": 109,
+          "exact": true
+        },
+        {
+          "quote": "* Тело не используется.",
+          "line_start": 148,
+          "line_end": 148,
+          "exact": true
+        },
+        {
+          "quote": "* **Content-Type:** `application/json` .",
+          "line_start": 147,
+          "line_end": 147,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-19",
+        "R-20"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-014",
+      "scope": "R-21",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Противоречие между правилом ответа и примером: статус HTTP 200 возвращается вместе с телом, содержащим ошибку (result: \"ERROR\"), в то время как общее правило гласит, что статусы 200 — успешные, а ошибки должны возвращаться с соответствующими кодами (например, 400). Возврат бизнес-ошибок со статусом HTTP 200 нарушает принципы REST API.",
+      "recommendation": "Для бизнес-ошибок (например, неверная сумма) возвращать HTTP-статус 400 вместо 200, приведя примеры ответов в соответствие с HTTP-статусами.",
+      "question": "Почему ошибки валидации данных возвращаются с HTTP-статусом 200?",
+      "evidence": [
+        {
+          "quote": "Если результат 200 или 201 — успешный. Если результат 400, 401 и далее — неуспешный.",
+          "line_start": 151,
+          "line_end": 151,
+          "exact": true
+        },
+        {
+          "quote": "{\"result\":\"ERROR\",\"message\":\"Проверьте сумму\"}",
+          "line_start": 171,
+          "line_end": 171,
+          "exact": true
+        },
+        {
+          "quote": "| `message` | string | При ошибке | Описание ошибки | — |",
+          "line_start": 158,
+          "line_end": 158,
+          "exact": true
+        },
+        {
+          "quote": "```json\n{\"result\":\"ERROR\",\"message\":\"Проверьте сумму\"}\n```",
+          "line_start": 170,
+          "line_end": 171,
+          "exact": true
+        },
+        {
+          "quote": "**200.** Ответ в случае успешного выполнения метода.",
+          "line_start": 162,
+          "line_end": 162,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-015",
+      "scope": "R-21",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Использование формулировки «результат 200 или 201» для HTTP-статусов некорректно, так как в спецификации для успешного ответа определен только статус 200 (а статус 201 в документации далее не возвращается). Кроме того, в теле ответа со статусом 200 может возвращаться JSON с полем result: \"ERROR\", что создает неоднозначность определения успешности запроса.",
+      "recommendation": "Уточнить правило определения успешности: считать запрос успешным при HTTP-статусе 200 и значении поля result равном \"OK\".",
+      "question": "Каким образом клиент должен трактовать HTTP 200, если в теле ответа приходит result: \"ERROR\"?",
+      "evidence": [
+        {
+          "quote": "Если результат 200 или 201 — успешный. Если результат 400, 401 и далее — неуспешный.",
+          "line_start": 151,
+          "line_end": 151,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-016",
+      "scope": "R-23",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Параметр amount объявлен с разными типами в запросе («integer» в строке 143) и в ответе («string» в строке 156), что создает двусмысленность при обработке данных клиентом.",
+      "recommendation": "Привести тип параметра amount к единому стандарту во всех секциях API (например, string или integer).",
+      "question": "Какой тип данных ожидается для поля amount в ответе — строковый или числовой?",
+      "evidence": [
+        {
+          "quote": "| `amount` | string | При успехе | Порог в тенге | `limit_kzt` |",
+          "line_start": 156,
+          "line_end": 156,
+          "exact": true
+        },
+        {
+          "quote": "| `amount` | integer | 32 bit | Да | 1 000–1 000 000 | Порог в тенге | `limit_kzt` |",
+          "line_start": 143,
+          "line_end": 143,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-17",
+        "R-23"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-017",
+      "scope": "R-24",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Параметр enabled объявлен с разными типами: «integer» в запросе (строка 144) и «string» в ответе (строка 157).",
+      "recommendation": "Унифицировать тип параметра enabled для запроса и ответа (например, использовать строку или число для обоих случаев).",
+      "question": "Должен ли параметр enabled в запросе передаваться как число или как строка?",
+      "evidence": [
+        {
+          "quote": "| `enabled` | string | «0» или «1» | Признак включения | `enabled` |",
+          "line_start": 157,
+          "line_end": 157,
+          "exact": true
+        },
+        {
+          "quote": "| `enabled` | integer | 1 знак | Да | 0 или 1 | Признак включения | `enabled` |",
+          "line_start": 144,
+          "line_end": 144,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-18",
+        "R-24"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-018",
+      "scope": "R-25",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Для параметра message не указаны критерии приёмки или негативные тест-кейсы, проверяющие формат и содержание возвращаемого текста ошибки.",
+      "recommendation": "Добавить в раздел критериев приёмки или в описания статус-кодов ожидаемые тексты ошибок для параметра message.",
+      "question": "Где зафиксированы ожидаемые значения и сценарии появления параметра message?",
+      "evidence": [
+        {
+          "quote": "| `message` | string | При ошибке | Описание ошибки | — |",
+          "line_start": 158,
+          "line_end": 158,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-019",
+      "scope": "R-26",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Отсутствуют явные критерии приёмки для проверки успешного ответа метода сохранения настроек.",
+      "recommendation": "Добавить критерий приёмки, подтверждающий сохранение настроек и получение статуса 200 с телом `{\"result\":\"OK\", ...}`.",
+      "question": "Какие тест-кейсы покрывают успешное выполнение метода со статусом 200?",
+      "evidence": [
+        {
+          "quote": "**200.** Ответ в случае успешного выполнения метода.",
+          "line_start": 162,
+          "line_end": 162,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-020",
+      "scope": "R-26",
+      "criterion": "UNA",
+      "severity": "minor",
+      "problem": "Заголовок подраздела содержит слово 'Created', которое обычно соответствует стандарту HTTP 201, в то время как само требование описывает статус 200.",
+      "recommendation": "Исправить подзаголовок на '200. Successful — OK'.",
+      "question": "Почему для статуса 200 в заголовке указано Created?",
+      "evidence": [
+        {
+          "quote": "**200.** Ответ в случае успешного выполнения метода.",
+          "line_start": 162,
+          "line_end": 162,
+          "exact": true
+        },
+        {
+          "quote": "#### 200. Successful — Created",
+          "line_start": 165,
+          "line_end": 165,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Заголовок подраздела содержит неверное слово Created для статуса 200.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-021",
+      "scope": "R-27",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Для статуса 400 не приведены конкретные тест-кейсы в таблице критериев приёмки (например, передача невалидного типа данных или выхода за границы диапазона).",
+      "recommendation": "Добавить в раздел критериев приёмки примеры запросов с неверными параметрами и ожидаемым ответом 400.",
+      "question": "Какие именно комбинации неверных параметров должны приводить к ответу 400?",
+      "evidence": [
+        {
+          "quote": "**400.** Ответ в случае, если параметры запроса заполнены неверно.",
+          "line_start": 163,
+          "line_end": 163,
+          "exact": true
+        },
+        {
+          "quote": "```json\n{\"message\":\"Некорректный запрос\"}\n```",
+          "line_start": 179,
+          "line_end": 180,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-022",
+      "scope": "R-28",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Отсутствует явная трассировка требования на тест-кейсы проверки отсутствия или истечения токена авторизации.",
+      "recommendation": "Добавить в план тестирования проверку запроса без заголовка Authorization.",
+      "question": "Где описан сценарий проверки ответа 401 для просроченного токена?",
+      "evidence": [
+        {
+          "quote": "**401.** Ответ в случае, если запрос выполнен без необходимой авторизации.",
+          "line_start": 174,
+          "line_end": 174,
+          "exact": true
+        },
+        {
+          "quote": "```json\n{\"message\":\"Требуется вход\"}\n```",
+          "line_start": 184,
+          "line_end": 185,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-023",
+      "scope": "R-29",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Отсутствует критерий приёмки для проверки попытки доступа к чужой карте.",
+      "recommendation": "Добавить в критерии приёмки отдельную строку для проверки запроса с чужим cardId.",
+      "question": "Где зафиксирован тест-кейс проверки безопасности при попытке доступа к чужой карте?",
+      "evidence": [
+        {
+          "quote": "Для чужой карты возвращается 404, как и для отсутствующей карты.",
+          "line_start": 189,
+          "line_end": 189,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-024",
+      "scope": "R-30",
+      "criterion": "TRC",
+      "severity": "major",
+      "problem": "Отсутствует способ проверки внутренней ошибки сервера (невозможно воспроизвести детерминированно без эмуляции сбоя БД или сервиса).",
+      "recommendation": "Указать в требованиях к тестированию необходимость использования заглушек или моков для эмуляции ошибки 500.",
+      "question": "Каким образом тестировщики должны воспроизводить и подтверждать ответ 500?",
+      "evidence": [
+        {
+          "quote": "**500.** Ответ в случае, если произошла внутренняя ошибка сервера.",
+          "line_start": 176,
+          "line_end": 176,
+          "exact": true
+        },
+        {
+          "quote": "```json\n{\"message\":\"Ошибка сервиса\"}\n```",
+          "line_start": 196,
+          "line_end": 197,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-025",
+      "scope": "R-31",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Требование R-31 описано в подразделе статуса 403 (строка 175), но требует возвращать код 404. Возникает прямое противоречие между заголовком подраздела 403 и текстом требования, что блокирует корректную реализацию и тестирование API.",
+      "recommendation": "Перенести текст требования в отдельный подраздел со статусом 404 или исправить заголовок подраздела в соответствии с возвращаемым кодом.",
+      "question": "Какой именно HTTP-статус (403 или 404) должен возвращаться при запросе чужой или отсутствующей карты?",
+      "evidence": [
+        {
+          "quote": "403. Ответ в случае, если на указанный ресурс доступ запрещен.",
+          "line_start": 175,
+          "line_end": 175,
+          "exact": false
+        },
+        {
+          "quote": "Для чужой карты возвращается 404, как и для отсутствующей карты.",
+          "line_start": 189,
+          "line_end": 189,
+          "exact": false
+        },
+        {
+          "quote": "**404**\n```json\n{\"message\":\"Карта не найдена\"}\n```",
+          "line_start": 190,
+          "line_end": 192,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-09",
+        "R-29",
+        "R-31"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-026",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Правило задания порога и проверки валюты определено только для карт KZT, но в требованиях к данным и API отсутствуют ограничения или проверки для карт в других валютах, если держатель попытается передать карту с отличной валютой счета.",
+      "recommendation": "Явно указать поведение системы и валидацию при попытке настроить порог для карты с валютой, отличной від KZT.",
+      "question": "Что должна вернуть система, если клиент попытается передать cardId карты в другой валюте (например, USD)?",
+      "evidence": [
+        {
+          "quote": "* **Ф-1.** Держатель активной карты KZT задаёт целый порог от 1 000 до 1 000 000 ₸ включительно. По умолчанию уведомление выключено.",
+          "line_start": 37,
+          "line_end": 37,
+          "exact": true
+        },
+        {
+          "quote": "| `cardId` | string | 1–64 | Да | Карта клиента | Идентификатор карты | `card_id` |",
+          "line_start": 142,
+          "line_end": 142,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-01",
+        "R-16"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-027",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Не описан жизненный цикл обратной операции для возврата (частичный и полный возврат), а также сценарий, что происходит со сработавшим ранее push-уведомлением, если после возврата значение расходов снова стало ниже порога, а затем пересекло его повторно.",
+      "recommendation": "Описать правила пересчета расходов при частичном и полном возврате, а также поведение системы при повторном достижении порога после возврата суммы ниже границы.",
+      "question": "Должен ли клиент получить второй push в том же календарном месяце, если расходы сначала достигли порога, затем уменьшились из-за возврата ниже порога, а после очередной покупки снова превысили его?",
+      "evidence": [
+        {
+          "quote": "* **Ф-2.** Месяц определяется по дате совершения покупки в Алматы. В расходы входят проведённые покупки. Возврат уменьшает расходы месяца исходной покупки. Переводы и снятие наличных исключаются.",
+          "line_start": 38,
+          "line_end": 38,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-02"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-028",
+      "scope": "SET",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Для реализации бизнес-правила обработки возвратов (Ф-2), уменьшающего расходы месяца исходной покупки, в требованиях к данным не хватает атрибута связи операции возврата с исходной операцией покупки (например, ID исходной транзакции) и даты исходной покупки.",
+      "recommendation": "Добавить в требования к данным атрибут связи возврата с исходной операцией (ссылка на идентификатор исходной операции).",
+      "question": "Каким образом сервис будет связывать операцию возврата с исходной покупкой для уменьшения расходов правильного месяца без сохранения идентификатора или ссылки на оригинал транзакции?",
+      "evidence": [
+        {
+          "quote": "* **Ф-2.** Месяц определяется по дате совершения покупки в Алматы. В расходы входят проведённые покупки. Возврат уменьшает расходы месяца исходной покупки. Переводы и снятие наличных исключаются.",
+          "line_start": 38,
+          "line_end": 38,
+          "exact": true
+        },
+        {
+          "quote": "Хранить идентификатор карты, месяц, идентификатор операции, сумму покупки в тиынах, признак отправки и порог в тенге.",
+          "line_start": 49,
+          "line_end": 49,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-02",
+        "R-06"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-029",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "В критериях приёмки полностью отсутствуют проверяемые исходы для веток бизнес-правил, связанных с лимитом «максимум один такой push за календарный месяц» (попытка отправки второго push в том же месяце) и с поведением при выключенном уведомлении.",
+      "recommendation": "Добавить в таблицу критериев приёмки строки с проверкой того, что второй push за месяц не отправляется при повторном пересечении порога, а также сценарий проверки выключенного уведомления.",
+      "question": "Как тестировщик должен проверить, что за календарный месяц на одну карту отправляется ровно один push, даже если порог пересекается повторно?",
+      "evidence": [
+        {
+          "quote": "* **Ф-3.** Когда расходы переходят от суммы ниже порога к сумме, равной порогу или выше, клиент получает push. На карту приходится максимум один такой push за календарный месяц.",
+          "line_start": 39,
+          "line_end": 39,
+          "exact": true
+        },
+        {
+          "quote": "| Исходные условия | Действие | Ожидаемый результат |",
+          "line_start": 61,
+          "line_end": 61,
+          "exact": true
+        },
+        {
+          "quote": "| Расходы 48 500 ₸, порог 50 000 ₸ | Провести покупку на 1 500 ₸ | Итог 50 000 ₸ и один push |",
+          "line_start": 63,
+          "line_end": 63,
+          "exact": true
+        },
+        {
+          "quote": "| Покупка 31 января в 23:58 на 4 000 ₸ | Провести 1 февраля в 00:03 по Алматы | Февральский счётчик вырос на 4 000 ₸ |",
+          "line_start": 64,
+          "line_end": 64,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-03"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-030",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Не определен конкретный уникальный ключ, по которому событие процессинга считается повторным для обеспечения идемпотентности, а также не раскрыто детально, что именно означает формулировка «сохраняет исходный итог».",
+      "recommendation": "Зафиксировать идентификатор (например, комбинацию идентификатора операции и карты), по которому определяется дубль события, и точное ожидаемое состояние счетчиков при повторной доставке.",
+      "question": "По какому точному набору полей входящего события процессинг и сервис расходов определяют, что событие уже обрабатывалось?",
+      "evidence": [
+        {
+          "quote": "Сервис передаёт push на отправку в течение минуты после получения события.",
+          "line_start": 46,
+          "line_end": 46,
+          "exact": true
+        },
+        {
+          "quote": "Приложение читает и сохраняет настройки через дочерний документ «Уведомление о расходах по карте — REST API». Повторная доставка одного события процессинга сохраняет исходный итог.",
+          "line_start": 52,
+          "line_end": 52,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-05",
+        "R-07"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-031",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Для наблюдаемого результата отправки push-уведомления не детализированы канал доставки, точный формат текста сообщения и получатель (идентификатор устройства или пользователя), что не позволяет однозначно проверить результат тестировщику.",
+      "recommendation": "Указать в требованиях канал отправки (push), структуру и шаблон текста сообщения, а также целевой идентификатор получателя.",
+      "question": "Какой именно текст должен быть в push-уведомлении и на какое устройство он должен быть отправлен?",
+      "evidence": [
+        {
+          "quote": "Сервис передаёт push на отправку в течение минуты после получения события.",
+          "line_start": 46,
+          "line_end": 46,
+          "exact": true
+        },
+        {
+          "quote": "Процессинг → сервис расходов: проведена покупка. Сервис расходов → настройки: получить порог карты. Сервис расходов → push: передать последние четыре цифры карты и сумму при достижении порога.",
+          "line_start": 43,
+          "line_end": 43,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-05"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-032",
+      "scope": "SET",
+      "criterion": "S-MOD",
+      "severity": "major",
+      "problem": "В документе не указаны номер версии и дата.",
+      "recommendation": "Добавить версию, дату и историю изменений документа.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "Документ (версия/дата) в источнике не заполнен. Пункты чек-листа приведены как в шаблоне, отметки не проставлены.",
+          "line_start": 68,
+          "line_end": 68,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-033",
+      "scope": "SET",
+      "criterion": "DOC",
+      "severity": "major",
+      "problem": "Чек-лист ревью не заполнен: 14 пунктов с вариантами «Да / Нет» без выбранного значения (строки 72–85).",
+      "recommendation": "Пройти чек-лист ревью и проставить отметки до передачи в разработку.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| Техническое требование зафиксировано и покрывает бизнес-требование | Да / Нет | Да / Нет | |",
+          "line_start": 72,
+          "line_end": 72,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-034",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "В таблице ревью требований (строка 76) есть пункт про схему отката или скрытия функционала, но в самом документе отсутствует описание такой схемы или вариантов скрытия функционала.",
+      "recommendation": "Добавить в документ раздел со схемой отката решений или описанием вариантов скрытия функционала при невозможности отката.",
+      "question": "Как команда должна поступать при необходимости отката данного функционала?",
+      "evidence": [
+        {
+          "quote": "| Реализация задачи/проекта предусматривает схему отката решений | Да / Нет / Не требуется | Да / Нет / Не требуется | При невозможности отката — варианты скрытия функционала |",
+          "line_start": 76,
+          "line_end": 76,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-035",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "В чеклисте ревью (строки 78, 80, 82) отмечены требования к наличию модели данных, согласованию с архитекторами и проверке рисков ИБ, однако фактическое содержимое (сама модель данных, подтверждения согласования с архитекторами и чек-лист ИБ) в документе полностью отсутствует.",
+      "recommendation": "Дополнить документ моделью данных, результатами согласования с архитекторами и чек-листом информационной безопасности.",
+      "question": "Где зафиксированы модель данных, архитектурное согласование и результаты проверки ИБ?",
+      "evidence": [
+        {
+          "quote": "| Требование предусматривает модель данных или поток, содержит описание | Да / Нет / Не требуется | Да / Нет / Не требуется |",
+          "line_start": 78,
+          "line_end": 78,
+          "exact": true
+        },
+        {
+          "quote": "| Требование содержит архитектуру и согласовано с архитекторами | Да / Нет / Не требуется | Да / Нет / Не требуется | Для архитектуры — чек-лист |",
+          "line_start": 80,
+          "line_end": 80,
+          "exact": true
+        },
+        {
+          "quote": "| Структура требований не несёт изменений и рисков информационной безопасности | Да / Нет | Да / Нет | По информационной безопасности — чек-лист |",
+          "line_start": 82,
+          "line_end": 82,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-036",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Поле «Request URL» не заполнено (заглушка/прочерк): «**Request URL** | Dev: `/alerts/saveLimit` . Prod: —».",
+      "recommendation": "Заполнить раздел или явно указать «не применимо» с обоснованием.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| **Request URL** | Dev: `/alerts/saveLimit` . Prod: — |",
+          "line_start": 108,
+          "line_end": 108,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-037",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "severity": "major",
+      "problem": "Параметр `amount` объявлен с разными типами: «integer» в строке 143 и «string» в строке 156.",
+      "recommendation": "Согласовать представление поля `amount` или описать преобразование.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| `amount` | string | При успехе | Порог в тенге | `limit_kzt` |",
+          "line_start": 156,
+          "line_end": 156,
+          "exact": true
+        },
+        {
+          "quote": "| `amount` | integer | 32 bit | Да | 1 000–1 000 000 | Порог в тенге | `limit_kzt` |",
+          "line_start": 143,
+          "line_end": 143,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-038",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "severity": "major",
+      "problem": "Параметр `enabled` объявлен с разными типами: «integer» в строке 144 и «string» в строке 157.",
+      "recommendation": "Согласовать представление поля `enabled` или описать преобразование.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| `enabled` | string | «0» или «1» | Признак включения | `enabled` |",
+          "line_start": 157,
+          "line_end": 157,
+          "exact": true
+        },
+        {
+          "quote": "| `enabled` | integer | 1 знак | Да | 0 или 1 | Признак включения | `enabled` |",
+          "line_start": 144,
+          "line_end": 144,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-039",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "minor",
+      "problem": "Раздел не заполнен (заглушка/прочерк): «заполняются тестировщиками».",
+      "recommendation": "Заполнить раздел или явно указать «не применимо» с обоснованием.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "заполняются тестировщиками",
+          "line_start": 57,
+          "line_end": 57,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Раздел тестирования требований содержит заглушку.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-040",
+      "scope": "SET",
+      "criterion": "DOC",
+      "severity": "minor",
+      "problem": "Пустая строка таблицы: данные не внесены.",
+      "recommendation": "Заполнить таблицу (например, ответственных и согласующих).",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| | | |",
+          "line_start": 91,
+          "line_end": 91,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Пустая строка в таблице блока согласующих.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-041",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "minor",
+      "problem": "Поле «Swagger» не заполнено (заглушка/прочерк): «**Swagger** | —».",
+      "recommendation": "Заполнить раздел или явно указать «не применимо» с обоснованием.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| **Swagger** | — |",
+          "line_start": 110,
+          "line_end": 110,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Поле Swagger не заполнено.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    }
+  ],
+  "dropped": [
+    {
+      "id": "F-007",
+      "scope": "R-08",
+      "criterion": "TRC",
+      "reason": "объединена с F-004. дубликат F-004",
+      "problem": "Шаг не связан с конкретным тест-кейсом или критерием приёмки."
+    },
+    {
+      "id": "F-012",
+      "scope": "R-09",
+      "criterion": "TRC",
+      "reason": "объединена с F-008. дубликат F-008",
+      "problem": "Шаг не связан с критериями приёмки."
+    },
+    {
+      "id": "F-015",
+      "scope": "R-10",
+      "criterion": "TRC",
+      "reason": "объединена с F-012. дубликат F-012",
+      "problem": "Шаг не имеет прямой трассировки на тесты валидации входных параметров."
+    },
+    {
+      "id": "F-016",
+      "scope": "R-19",
+      "criterion": "FEA",
+      "reason": "объединена с F-003. дубликат F-003",
+      "problem": "Метод сохранения данных (изменение состояния) спроектирован с использованием небезопасного и неидемпотентного в общем случае HTTP-метода GET вместо PUT, POST или PATCH. Изменение данных через GET нару"
+    },
+    {
+      "id": "F-018",
+      "scope": "R-19",
+      "criterion": "APP",
+      "reason": "объединена с F-013. дубликат F-013",
+      "problem": "Требование указывает Content-Type: application/json для запроса, у которого одновременно зафиксировано, что тело не используется, а сами параметры передаются через query-строку (GET-метод). Это избыто"
+    },
+    {
+      "id": "F-022",
+      "scope": "R-23",
+      "criterion": "COR",
+      "reason": "объединена с F-016. дубликат F-016",
+      "problem": "Конфликт типов данных для одного и того же логического поля amount: входной параметр имеет тип integer, а выходной — string."
+    },
+    {
+      "id": "F-024",
+      "scope": "R-24",
+      "criterion": "COR",
+      "reason": "объединена с F-017. дубликат F-017",
+      "problem": "Противоречие в типах данных параметра enabled между запросом и ответом (integer против string)."
+    },
+    {
+      "id": "F-025",
+      "scope": "R-25",
+      "criterion": "COR",
+      "reason": "объединена с F-014. дубликат F-014",
+      "problem": "Требование описывает параметр message как возвращаемый при ошибке, однако в примере успешного ответа для статуса 200 возвращается тело с результатом ERROR и сообщением об ошибке, что противоречит архи"
+    },
+    {
+      "id": "F-027",
+      "scope": "R-26",
+      "criterion": "COR",
+      "reason": "объединена с F-014. дубликат F-014",
+      "problem": "Статус 200 задекларирован как успешный ответ, но в примере для него возвращается поле result со значением ERROR, что противоречит смыслу успешного HTTP-статуса."
+    },
+    {
+      "id": "F-032",
+      "scope": "R-29",
+      "criterion": "COR",
+      "reason": "объединена с F-025. дубликат F-025",
+      "problem": "Требование для статуса 403 содержит описание и примеры для статуса 404, а также утверждение, что для чужой карты возвращается 404, что противоречит заголовку требования 403 и стандартной семантике пра"
+    },
+    {
+      "id": "F-036",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-003. дубликат F-003",
+      "problem": "Изменение настроек (сохранение порога) спроектировано через HTTP-метод GET, а в успешном ответе (статус 200) возвращается тело с признаком ошибки."
+    },
+    {
+      "id": "F-037",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-025. дубликат F-025",
+      "problem": "Прямое противоречие между описанием статус-кода 403 в заголовке и требованием возвращать код 404 для чужой карты."
+    },
+    {
+      "id": "F-052",
+      "scope": "SET",
+      "criterion": "S-COM",
+      "reason": "объединена с F-016. дубликат F-016",
+      "problem": "Параметр amount имеет тип integer в запросе и тип string в ответе."
+    },
+    {
+      "id": "F-053",
+      "scope": "SET",
+      "criterion": "S-COM",
+      "reason": "объединена с F-017. дубликат F-017",
+      "problem": "Параметр enabled объявлен с разными типами: integer в запросе и string в ответе."
+    },
+    {
+      "id": "F-054",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-013. дубликат F-013",
+      "problem": "Требование наличия заголовка Content-Type: application/json противоречит факту отсутствия тела запроса и передаче параметров через query-строку."
+    }
+  ],
+  "set_verdicts": {
+    "S-CMP": {
+      "status": "partial",
+      "comment": "В документе отсутствуют отметки в таблице ревью требований, не заполнены адрес продуктивной среды и ссылки на Swagger."
+    },
+    "S-CON": {
+      "status": "fail",
+      "comment": "Имеются критические противоречия между HTTP-методом GET и изменением состояния данных, несоответствия кодов статусов и тел ответа (код 200 со статусом ERROR), а также путаница между кодами 403 и 404."
+    },
+    "S-FEA": {
+      "status": "fail",
+      "comment": "Использование HTTP GET для сохранения настроек нарушает базовые архитектурные ограничения и стандарты безопасности."
+    },
+    "S-COM": {
+      "status": "partial",
+      "comment": "Типы данных для параметров amount и enabled различаются между запросом (integer) и ответом (string), что затрудняет понимание."
+    },
+    "S-VAL": {
+      "status": "fail",
+      "comment": "Отсутствуют критерии приёмки для большинства позитивных и негативных сценариев API и интеграционных требований."
+    },
+    "S-RNK": {
+      "status": "fail",
+      "comment": "У требований не указана важность, приоритет или стабильность."
+    },
+    "S-MOD": {
+      "status": "partial",
+      "comment": "Версия документа и дата ревизии в заголовке и таблице не зафиксированы."
+    },
+    "S-TRC": {
+      "status": "fail",
+      "comment": "Большая часть функциональных требований и требований API не трассируется на критерии приёмки или тесты."
+    }
+  },
+  "dev_ready": "no",
+  "test_ready": "no",
+  "verdict_text": "Начинать разработку и тестирование нельзя из-за критических архитектурных и логических дефектов. Обнаружены противоречия в HTTP-методе для сохранения данных (F-003), возврате кодов ошибок авторизации и прав доступа (F-007, F-025), а также передаче бизнес-ошибок со статусом HTTP 200 (F-014). Кроме того, зафиксированы несоответствия типов данных между запросом и ответом (F-016, F-017) и незаполненные обязательные разделы документа (F-032, F-035, F-036).",
+  "priority_fixes": [
+    {
+      "action": "Исправить HTTP-метод для сохранения настроек с GET на PUT или POST, исключив передачу параметров в query-строке.",
+      "finding_ids": [
+        "F-003",
+        "F-013"
+      ]
+    },
+    {
+      "action": "Устранить противоречие в возврате кодов ошибок для чужой карты между заголовком 403 и текстом о возврате 404.",
+      "finding_ids": [
+        "F-007",
+        "F-025"
+      ]
+    },
+    {
+      "action": "Исправить логику возврата ошибок: ошибки валидации и бизнес-логики должны возвращаться с соответствующими HTTP-статусами (например, 400), а не со статусом 200.",
+      "finding_ids": [
+        "F-014",
+        "F-018"
+      ]
+    },
+    {
+      "action": "Привести типы данных параметров amount и enabled к единому типу в запросе и в ответе API.",
+      "finding_ids": [
+        "F-016",
+        "F-017"
+      ]
+    },
+    {
+      "action": "Заполнить версию и дату документа, продуктивный URL, а также обязательные пункты чек-листа ревью и архитектурные описания.",
+      "finding_ids": [
+        "F-032",
+        "F-035",
+        "F-036"
+      ]
+    }
+  ],
+  "llm_calls": 12,
+  "cache_hits": 0,
+  "agent_version": "v1.3.1 (git a319393)",
+  "stage_durations": {
+    "rules": 0.008471012115478516,
+    "segmentation": 8.484360933303833,
+    "review_pass_1": 128.7321662902832,
+    "critic": 11.96888780593872
+  },
+  "models_used": [
+    "gemini-3.5-flash-lite"
+  ],
+  "coverage_gaps": [
+    "R-02: отсутствует оценка критериев.",
+    "R-03: отсутствует оценка критериев.",
+    "R-04: отсутствует оценка критериев.",
+    "R-05: отсутствует оценка критериев.",
+    "R-06: отсутствует оценка критериев."
+  ],
+  "retries": 1,
+  "request_log": [
+    {
+      "step": "нарезка",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 8.458
+    },
+    {
+      "step": "проверка R-01…R-06",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 2.426
+    },
+    {
+      "step": "проверка R-07…R-12",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 7.817
+    },
+    {
+      "step": "проверка R-13…R-18",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 2.645
+    },
+    {
+      "step": "проверка R-19…R-24",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 6.538
+    },
+    {
+      "step": "проверка R-19…R-24",
+      "model": "gemini-3.5-flash-lite",
+      "retry": true,
+      "duration_s": 5.074
+    },
+    {
+      "step": "проверка R-25…R-30",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 6.945
+    },
+    {
+      "step": "проверка R-31…R-31",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 2.043
+    },
+    {
+      "step": "проверка набора",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 5.032
+    },
+    {
+      "step": "поиск противоречий",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 2.005
+    },
+    {
+      "step": "поиск пропущенных сценариев",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 7.203
+    },
+    {
+      "step": "второй ревьюер",
+      "model": "gemini-3.5-flash-lite",
+      "retry": false,
+      "duration_s": 6.493
+    }
+  ],
+  "document": {
+    "name": "requirements.md",
+    "title": "Уведомление о расходах по карте",
+    "sha256": "e7dae55e5453a250d93e335f5ff9c7f775f4457ccddd333f4a67e47b20d74381",
+    "lines": 198
+  }
+}

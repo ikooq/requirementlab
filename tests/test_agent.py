@@ -507,3 +507,142 @@ def test_batch_is_split_when_model_keeps_breaking_json(spec):
     assert llm.broken > 0
     assert all(r.verdicts for r in res.requirements)
     assert any(f.criterion == "VER" and f.severity == "critical" for f in res.findings)
+
+
+def test_cli_continues_interrupted_run_without_repeating_segmentation(tmp_path, spec, monkeypatch):
+    from reqlab import cli
+    from reqlab.llm import LLMError
+
+    monkeypatch.setattr(cli, "ROOT", tmp_path)
+    monkeypatch.setattr(cli, "_load_env", lambda: None)
+    class Interrupted(FakeLLM):
+        def _call(self, system, user):
+            if "проверить КАЖДОЕ" in user:
+                raise LLMError("daily quota")
+            return super()._call(system, user)
+
+    clients = iter([Interrupted(), FakeLLM(), FakeLLM()])
+    monkeypatch.setattr(cli, "from_env", lambda *args, **kwargs: next(clients))
+    out = tmp_path / "report.md"
+    args = [str(spec), str(out), "--passes", "1"]
+    assert cli.main([*args, "--fresh-run"]) == 3
+    assert not out.exists()
+    directory, = (tmp_path / ".cache" / "runs").iterdir()
+    assert cli.main([*args, "--continue-run", directory.name]) == 0
+    result = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+    assert result["cache_hits"] == 1
+    assert result["findings"]
+    assert cli.main([*args, "--continue-run", directory.name, "--no-verify"]) == 2
+
+
+def test_type_conflict_cites_both_declarations_and_ignores_fenced_examples(tmp_path):
+    spec = tmp_path / "schema.md"
+    header = "| Parameter | Format |\n"
+    spec.write_text(header + "| amount | integer |\n\n~~~markdown\n" + header
+                    + "| amount | boolean |\n~~~\n\n" + header + "| amount | string |\n",
+                    encoding="utf-8")
+    hits = [h for h in rules.run(load(spec)) if h.rule == "type-mismatch"]
+    finding, = Agent(FakeLLM(), verbose=False)._rule_findings(hits)
+    assert [(e.line_start, e.quote) for e in finding.evidence] == [
+        (10, "| amount | string |"), (2, "| amount | integer |")]
+
+
+@pytest.mark.parametrize("clicked,other_screen,count", [
+    ("Отправить", "", 1), ("применить", "", 0),
+    ("Отправить", "На экране подтверждения кнопка «Отправить».", 0)])
+def test_acceptance_button_trace(tmp_path, clicked, other_screen, count):
+    path = tmp_path / "screen.md"
+    path.write_text(f"На экране настроек кнопка «Применить».\n{other_screen}\n"
+                    f"### Критерии приёмки\n| Пользователь нажимает «{clicked}» | Готово |\n"
+                    "### Пример\nНажимает «Назад».", encoding="utf-8")
+    hits = [h for h in rules.run(load(path)) if h.rule == "acceptance-button"]
+    assert len(hits) == count
+    if hits:
+        assert (hits[0].related_line[0], hits[0].line_start) == (1, 4)
+
+
+def test_invented_acceptance_criterion_cannot_unlock_testing(spec):
+    class Fabricated(FakeLLM):
+        def _call(self, system, user):
+            if "нарезать документ" in user:
+                data = json.loads(super()._call(system, user))
+                data["acceptance_criteria"] = [{"line": 4, "quote": "ZXQ made-up acceptance criterion"}]
+                return json.dumps(data)
+            return super()._call(system, user)
+
+    result = Agent(Fabricated(), verbose=False).run(load(spec))
+    assert result.acceptance == []
+    assert result.test_ready == "no"
+
+
+def test_critic_keeps_conflict_separate_from_missing_test_coverage(spec):
+    class Critic(FakeLLM):
+        def _call(self, system, user):
+            return json.dumps({"decisions": [{"id": "F-002", "keep": False,
+                                              "duplicate_of": "F-001"}]})
+    trace = _f("F-001", "R-01", "major", "Нет критерия приёмки", [3])
+    trace.criterion = "TRC"
+    conflict = _f("F-002", "SET", "critical", "Требования несовместимы", [3, 5])
+    conflict.criterion = "S-CON"
+    *_, dropped = Agent(Critic(), verbose=False)._critic(load(spec), "", [trace, conflict])
+    assert dropped == []
+    assert trace.severity == "major"
+
+
+def test_duplicates_preserve_evidence_but_shared_intro_is_not_a_duplicate():
+    from reqlab.pipeline import _dedupe
+    intro = "В данном требовании к поведению сервиса отсутствует описание "
+    a = _f("", "R-01", "minor", intro + "отмены", [4])
+    b = _f("", "R-01", "critical", a.problem, [4, 9])
+    c = _f("", "R-01", "major", intro + "восстановления", [4])
+    assert _dedupe([a, b, c]) == [a, c]
+    assert a.severity == "critical"
+    assert [e.line_start for e in a.evidence] == [4, 9]
+
+
+def test_findings_only_repairs_array_envelope_locally():
+    item = {"problem": "Расхождение", "quotes": ["Строка документа"]}
+    for data in ([item], {"findings": [item]}):
+        assert parse_json(json.dumps(data), findings_only=True) == {"findings": [item]}
+    assert parse_json("[]", findings_only=True) == {"findings": []}
+    for raw in ("{}", "[{}]", '{"findings": null}', '[{"problem": "missing source"}]'):
+        with pytest.raises(ValueError):
+            parse_json(raw, findings_only=True)
+    with pytest.raises(ValueError):
+        parse_json("[]")
+
+
+def test_partial_batch_recovers_only_missing_requirements(spec):
+    class Partial(FakeLLM):
+        def __init__(self):
+            super().__init__()
+            self.recoveries = 0
+
+        def _call(self, system, user):
+            text = super()._call(system, user)
+            if "проверить КАЖДОЕ" in user:
+                data = json.loads(text)
+                if "предыдущий ответ пропустил" in user:
+                    self.recoveries += 1
+                else:
+                    data["results"] = data["results"][:1]
+                return json.dumps(data)
+            return text
+
+    model = Partial()
+    result = Agent(model, verbose=False).run(load(spec))
+    assert model.recoveries == 1
+    assert all(any(v != "unknown" for v in r.verdicts.values()) for r in result.requirements)
+
+
+def test_cycle_of_duplicates_preserves_both_findings(spec):
+    class Critic(FakeLLM):
+        def _call(self, system, user):
+            return json.dumps({"decisions": [
+                {"id": "F-001", "keep": False, "duplicate_of": "F-002"},
+                {"id": "F-002", "keep": False, "duplicate_of": "F-001"},
+            ]})
+    left = _f("F-001", "SET", "critical", "First", [3])
+    right = _f("F-002", "R-01", "critical", "Second", [5])
+    *_, dropped = Agent(Critic(), verbose=False)._critic(load(spec), "", [left, right])
+    assert dropped == []

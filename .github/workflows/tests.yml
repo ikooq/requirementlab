@@ -9,4 +9,58 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
+      - name: Fetch pinned case document
+        run: curl -fsSL --retry 3 https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md -o docs/requirements.md
       - run: pytest -q
+      - run: python eval/score.py reports/blind/autopay.json --holdout --labels eval/labels_autopay.json --min-critical-recall 1 --min-f1 0.783
+      - run: python -m eval.evidence docs/requirements.md reports/report.json
+      - run: python -m eval.evidence docs/blind/autopay.md reports/blind/autopay.json
+      - name: Check freeze control report and its source evidence
+        run: |
+          python eval/score.py reports/blind/card-freeze.json --golden eval/golden_freeze.json --min-recall 1 --min-critical-recall 1
+          python -m eval.evidence docs/blind/card-freeze.md reports/blind/card-freeze.json
+      - name: Verify prospective benchmark and cross-report register
+        run: |
+          python eval/score.py reports/blind/statement-two-pass.json --golden eval/golden_statement.json --labels eval/labels_statement_two_pass.json --min-recall 1 --min-critical-recall 1 --min-f1 0.92
+          python -m eval.evidence docs/blind/statement.md reports/blind/statement-two-pass.json
+          python eval/score.py reports/experiments/blind/autopay-consensus.json --holdout --min-recall 0.96 --min-critical-recall 1
+          python -m eval.evidence docs/blind/autopay.md reports/experiments/blind/autopay-consensus.json
+      - run: python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: analyst-workspace
+          path: reports/review.html
+          if-no-files-found: error
+      - name: Prepare isolated reviewer packet
+        run: python -m eval.promotion packet reports/report.json independent-review.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: independent-review
+          path: independent-review.zip
+          if-no-files-found: error
+  submission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - name: Fetch pinned case document
+        run: curl -fsSL --retry 3 https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md -o docs/requirements.md
+      - name: Verify every submission against the same threshold
+        run: python -m eval.promotion gate reports/report.json eval/promotion-review.csv
+      - run: python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
+      - name: Package verified submission
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirementlab-submission-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            submission.md
+            docs/requirements.md
+            reports/report.md
+            reports/report.json
+            reports/report-brief.md
+            reports/metrics-case.md
+            reports/review.html

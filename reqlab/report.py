@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections import Counter
+from hashlib import sha256
+from pathlib import Path
 
 from .criteria import ALL, CRITICAL_GROUPS, INDIVIDUAL, SET, SEVERITIES, SEVERITY_RU, name
 from .pipeline import Finding, RunResult
@@ -59,6 +61,13 @@ def _head(w, res: RunResult, sev: Counter, limit: int, more: str) -> None:
       f"Требований: {len(res.requirements)}, нарушений: {len(res.findings)} "
       f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
     w("")
+    if res.requested_model and any(model != res.requested_model for model in res.models_used):
+        w(f"> **Использована запасная модель.** Запрошена {_cell(res.requested_model)}. "
+          f"Ответы получены от {_cell(', '.join(res.models_used))}.")
+        w("")
+    if res.coverage_gaps:
+        w("**Проверка неполна.** " + " ".join(res.coverage_gaps))
+        w("")
     top = top_findings(res.findings, limit)
     if top:
         w("**Главное — что исправить до старта разработки:**")
@@ -127,12 +136,23 @@ def render(res: RunResult) -> str:
         ("Дата прогона", res.started.strftime("%d.%m.%Y %H:%M:%S") + " (UTC"
          + res.started.strftime("%z")[:3] + ":" + res.started.strftime("%z")[3:] + ")"),
         ("Модель", res.model),
-        ("Версия агента", res.agent_version),
+        ("Запрошенная модель", res.requested_model or "не записано"),
+        ("Число проходов", res.passes if res.passes is not None else "не записано"),
+        ("Требований в пакете", res.batch_size if res.batch_size is not None else "не записано"),
+        ("Версия агента при формировании данных", res.agent_version),
+        ("Оформление Markdown", "reqlab/report.py · SHA-256 исходника (UTF-8, LF) "
+         + sha256(Path(__file__).read_text(encoding="utf-8").encode("utf-8")).hexdigest()),
         ("Методика", "ISO/IEC/IEEE 29148:2018 п. 5.2.5 и 5.2.6; IEEE Std 830-1998 п. 4.3"),
         ("Шаги", "правила → нарезка → проверка требований → проверка набора → привязка цитат → второй ревьюер"),
         ("Вызовы модели", _calls(res)),
+        ("Использованные модели", ", ".join(res.models_used) or res.model),
+        ("Повторы API", str(res.retries) if res.stage_durations or res.request_log else "не записано"),
+        ("Время по этапам", ", ".join(f"{k}: {v:.1f} с" for k, v in res.stage_durations.items()) or "не записано"),
         ("Отсеяно находок", f"{len(res.dropped)} (неподтверждённая цитата или отклонено вторым ревьюером)"),
     ]
+    for parent in res.lineage:
+        rows.append(("Исходный отчёт", f"{parent['file']} · {parent['agent_version']} · "
+                     f"{parent['model']} · SHA-256 {parent['sha256']}"))
     for k, v in rows:
         w(f"| {k} | {_cell(v)} |")
     w("")
@@ -188,7 +208,10 @@ def render(res: RunResult) -> str:
         w(f"> {_cell(r.quote)}")
         w("")
         if not fs:
-            w("Нарушений не найдено.")
+            if all(v == "unknown" for v in r.verdicts.values()):
+                w("Оценка отсутствует. Требование нужно проверить повторно.")
+            else:
+                w("Нарушений не найдено.")
             w("")
             continue
         for f in fs:
@@ -310,8 +333,12 @@ def _finding(w, f: Finding, doc) -> None:
         mark = "" if e.exact else " (текст строки документа)"
         w(f"- Место: {doc.location(e.line_start, e.line_end)}{mark} — «{_cell(e.quote, 300)}»")
     w(f"- Проблема: {_cell(f.problem)}")
+    if c:
+        w(f"- Основание: {c.code} · {c.source}")
+    w("- Уверенность: не калибровалась; требуется подтверждение аналитиком.")
+    w(f"- Решение аналитика: {f.analyst_decision}" + (f" — {_cell(f.analyst_note)}" if f.analyst_note else ""))
     if f.recommendation:
-        w(f"- Как исправить: {_cell(f.recommendation)}")
+        w(f"- Рекомендация: {_cell(f.recommendation)}")
     if f.question:
         w(f"- Вопрос владельцу требования: {_cell(f.question)}")
     if f.reviewer_note:

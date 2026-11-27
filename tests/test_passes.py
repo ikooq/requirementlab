@@ -67,6 +67,13 @@ def test_two_passes_union_findings_and_verdicts(tmp_path):
     llm = TwoMindsLLM()
     res = Agent(llm, batch_size=2, passes=2, verbose=False).run(load(p))
 
+    saved = res.to_json()
+    assert (saved["passes"], saved["batch_size"], saved["requested_model"]) == (2, 2, llm.requested_model)
+    from reqlab.report import render, render_brief
+    assert "Использована запасная модель" not in render(res)
+    res.models_used = ["fallback"]
+    for output in (render(res), render_brief(res)):
+        assert "Использована запасная модель" in output.split("Главное")[0]
     problems = {f.problem for f in res.findings if f.source == "llm"}
     assert problems == {"Нет сценария ошибки при сумме вне диапазона.", "«Быстро» нельзя проверить."}
     r1, r2 = res.requirements[0], res.requirements[1]

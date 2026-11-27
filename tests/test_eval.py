@@ -70,7 +70,7 @@ def test_cli_min_recall_exit_code(tmp_path: Path, capsys):
     assert "1 из 3" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("name", ["golden.json", "golden_autopay.json"])
+@pytest.mark.parametrize("name", ["golden.json", "golden_autopay.json", "golden_freeze.json"])
 def test_real_golden_is_valid(name):
     root = Path(__file__).parent.parent
     golden = json.loads((root / "eval" / name).read_text(encoding="utf-8"))
@@ -83,7 +83,10 @@ def test_real_golden_is_valid(name):
             re.compile(k)
     # эталон привязан к конкретному тексту: строки считаются по этому файлу
     from reqlab.loader import load
-    doc = load(root / golden["document"])
+    document = root / golden["document"]
+    if not document.exists():
+        pytest.skip(f"{golden['document']} скачивается отдельно, см. README")
+    doc = load(document)
     assert doc.sha256 == golden["sha256"]
     for d in golden["defects"]:
         assert all(1 <= n <= len(doc.lines) for n in d["lines"] or [])
@@ -111,3 +114,40 @@ def test_stale_label_is_ignored_with_warning():
     s = score(rep, GOLDEN, "r.json", labels)
     assert s.labels == {"F-1": "unlabeled"}
     assert any("другой находке" in w for w in s.warnings)
+
+
+@pytest.mark.parametrize("decision", ["benchmark", "analyst"])
+def test_rejected_match_cannot_cover_critical_defect(decision):
+    f = _f("F-1", 10, "Метод GET", severity="critical")
+    labels = {"labels": {}}
+    if decision == "benchmark":
+        labels["labels"][f["id"]] = {"label": "false", "problem": f["problem"]}
+    else:
+        f["analyst_decision"] = "rejected"
+    result = score({"findings": [f]}, GOLDEN, labels=labels)
+    assert result.critical_recall == result.precision == result.f1 == 0
+    assert "G1" in result.missed
+    second = _f("F-2", 10, "Сохранение через GET")
+    result = score({"findings": [f, second]}, GOLDEN, labels=labels)
+    assert result.found["G1"] == ["F-2"]
+    assert not result.severity_ok["G1"]
+
+
+def test_feedback_keeps_benchmark_binding_but_changed_evidence_breaks_it(tmp_path):
+    import hashlib
+
+    finding = _f("F-1", 10, "Метод GET", severity="critical")
+    digest = hashlib.sha256(json.dumps([finding], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    labels = tmp_path / "labels.json"
+    labels.write_text(json.dumps({"findings_sha256": digest}), encoding="utf-8")
+    golden = tmp_path / "golden.json"
+    golden.write_text(json.dumps(GOLDEN), encoding="utf-8")
+    path = tmp_path / "report.json"
+    finding.update(analyst_decision="rejected", analyst_note="Нет нарушения")
+    args = [str(path), "--golden", str(golden), "--labels", str(labels), "--min-critical-recall", "1"]
+    path.write_text(json.dumps({"findings": [finding]}), encoding="utf-8")
+    assert main(args) == 1
+    finding["evidence"][0]["line_start"] += 1
+    path.write_text(json.dumps({"findings": [finding]}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        main(args)
