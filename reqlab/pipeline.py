@@ -470,7 +470,15 @@ class Agent:
                 if not target:
                     m = re.search(r"дубл\w*\s+(F-\d{3})", reason, re.I)
                     target = m.group(1) if m else ""
-                if target in by_id and target != f.id:
+                if target:
+                    if target not in by_id or target == f.id:
+                        continue
+                    # Contradictory behaviour and missing coverage require distinct fixes.
+                    conflict = {"S-CON", "COR"}
+                    coverage = {"TRC", "S-TRC", "S-VAL", "VER"}
+                    pair = {f.criterion, by_id[target].criterion}
+                    if pair & conflict and pair & coverage:
+                        continue
                     dup_of[f.id] = target
                 dropped.append({"id": f.id, "scope": f.scope, "criterion": f.criterion,
                                 "reason": reason or "отклонено вторым ревьюером",

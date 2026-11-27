@@ -573,3 +573,17 @@ def test_invented_acceptance_criterion_cannot_unlock_testing(spec):
     result = Agent(Fabricated(), verbose=False).run(load(spec))
     assert result.acceptance == []
     assert result.test_ready == "no"
+
+
+def test_critic_keeps_conflict_separate_from_missing_test_coverage(spec):
+    class Critic(FakeLLM):
+        def _call(self, system, user):
+            return json.dumps({"decisions": [{"id": "F-002", "keep": False,
+                                              "duplicate_of": "F-001"}]})
+    trace = _f("F-001", "R-01", "major", "Нет критерия приёмки", [3])
+    trace.criterion = "TRC"
+    conflict = _f("F-002", "SET", "critical", "Требования несовместимы", [3, 5])
+    conflict.criterion = "S-CON"
+    *_, dropped = Agent(Critic(), verbose=False)._critic(load(spec), "", [trace, conflict])
+    assert dropped == []
+    assert trace.severity == "major"
