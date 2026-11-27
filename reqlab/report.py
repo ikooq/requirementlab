@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections import Counter
+from hashlib import sha256
+from pathlib import Path
 
 from .criteria import ALL, CRITICAL_GROUPS, INDIVIDUAL, SET, SEVERITIES, SEVERITY_RU, name
 from .pipeline import Finding, RunResult
@@ -130,7 +132,9 @@ def render(res: RunResult) -> str:
         ("Дата прогона", res.started.strftime("%d.%m.%Y %H:%M:%S") + " (UTC"
          + res.started.strftime("%z")[:3] + ":" + res.started.strftime("%z")[3:] + ")"),
         ("Модель", res.model),
-        ("Версия агента", res.agent_version),
+        ("Версия агента при формировании данных", res.agent_version),
+        ("Оформление Markdown", "reqlab/report.py · SHA-256 исходника (UTF-8, LF) "
+         + sha256(Path(__file__).read_text(encoding="utf-8").encode("utf-8")).hexdigest()),
         ("Методика", "ISO/IEC/IEEE 29148:2018 п. 5.2.5 и 5.2.6; IEEE Std 830-1998 п. 4.3"),
         ("Шаги", "правила → нарезка → проверка требований → проверка набора → привязка цитат → второй ревьюер"),
         ("Вызовы модели", _calls(res)),
