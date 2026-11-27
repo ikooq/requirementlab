@@ -87,9 +87,14 @@ def score(report: dict, golden: dict, name: str = "", labels: dict | None = None
     quotes = [e for f in findings for e in f.get("evidence", []) if "exact" in e]
     if quotes:
         s.exact_quote_share = sum(e["exact"] is True for e in quotes) / len(quotes)
+    candidates = {d["id"]: [f for f in findings if matches(d, f)] for d in golden["defects"]}
+    if labels is not None:
+        matched = {f["id"] for group in candidates.values() for f in group}
+        _apply_labels(s, findings, matched, labels)
     used: set[str] = set()
     for d in golden["defects"]:
-        hit = [f for f in findings if matches(d, f)]
+        hit = [f for f in candidates[d["id"]] if s.labels.get(f["id"]) != "false"
+               and f.get("analyst_decision") != "rejected"]
         if hit:
             s.found[d["id"]] = [f["id"] for f in hit]
             used.update(f["id"] for f in hit)
@@ -113,7 +118,6 @@ def score(report: dict, golden: dict, name: str = "", labels: dict | None = None
                                "recall": tp / len(ds) if ds else 1.0}
     s.matched_share = (len(used) / len(findings)) if findings else 0.0
     if labels is not None:
-        _apply_labels(s, findings, used, labels)
         s.duplicates = [fid for fid, label in s.labels.items() if label == "dup"]
         if "unlabeled" not in s.labels.values() and s.precision is not None:
             def harmonic(p, r):
@@ -138,7 +142,9 @@ def _apply_labels(s: Score, findings: list[dict], used: set[str], labels: dict) 
         if m and _norm(m.get("problem", ""))[:_KEY_LEN] != _norm(f.get("problem", ""))[:_KEY_LEN]:
             s.warnings.append(f"метка {f['id']} относится к другой находке (отчёт пересобран?) — пропущена")
             m = None
-        if m and m.get("label") in LABELS:
+        if f.get("analyst_decision") == "rejected":
+            s.labels[f["id"]] = "false"
+        elif m and m.get("label") in LABELS:
             s.labels[f["id"]] = m["label"]
         elif f["id"] in used:
             s.labels[f["id"]] = "true"

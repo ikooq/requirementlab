@@ -112,3 +112,20 @@ def test_stale_label_is_ignored_with_warning():
     s = score(rep, GOLDEN, "r.json", labels)
     assert s.labels == {"F-1": "unlabeled"}
     assert any("другой находке" in w for w in s.warnings)
+
+
+@pytest.mark.parametrize("decision", ["benchmark", "analyst"])
+def test_rejected_match_cannot_cover_critical_defect(decision):
+    f = _f("F-1", 10, "Метод GET", severity="critical")
+    labels = {"labels": {}}
+    if decision == "benchmark":
+        labels["labels"][f["id"]] = {"label": "false", "problem": f["problem"]}
+    else:
+        f["analyst_decision"] = "rejected"
+    result = score({"findings": [f]}, GOLDEN, labels=labels)
+    assert result.critical_recall == result.precision == result.f1 == 0
+    assert "G1" in result.missed
+    second = _f("F-2", 10, "Сохранение через GET")
+    result = score({"findings": [f, second]}, GOLDEN, labels=labels)
+    assert result.found["G1"] == ["F-2"]
+    assert not result.severity_ok["G1"]
