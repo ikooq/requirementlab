@@ -131,6 +131,9 @@ def render(res: RunResult) -> str:
         ("Методика", "ISO/IEC/IEEE 29148:2018 п. 5.2.5 и 5.2.6; IEEE Std 830-1998 п. 4.3"),
         ("Шаги", "правила → нарезка → проверка требований → проверка набора → привязка цитат → второй ревьюер"),
         ("Вызовы модели", _calls(res)),
+        ("Использованные модели", ", ".join(res.models_used) or res.model),
+        ("Повторы API", str(res.retries)),
+        ("Время по этапам", ", ".join(f"{k}: {v:.1f} с" for k, v in res.stage_durations.items())),
         ("Отсеяно находок", f"{len(res.dropped)} (неподтверждённая цитата или отклонено вторым ревьюером)"),
     ]
     for k, v in rows:
@@ -310,8 +313,12 @@ def _finding(w, f: Finding, doc) -> None:
         mark = "" if e.exact else " (текст строки документа)"
         w(f"- Место: {doc.location(e.line_start, e.line_end)}{mark} — «{_cell(e.quote, 300)}»")
     w(f"- Проблема: {_cell(f.problem)}")
+    if c:
+        w(f"- Основание: {c.code} · {c.source}")
+    w("- Уверенность: не калибровалась; требуется подтверждение аналитиком.")
+    w(f"- Решение аналитика: {f.analyst_decision}" + (f" — {_cell(f.analyst_note)}" if f.analyst_note else ""))
     if f.recommendation:
-        w(f"- Как исправить: {_cell(f.recommendation)}")
+        w(f"- Рекомендация: {_cell(f.recommendation)}")
     if f.question:
         w(f"- Вопрос владельцу требования: {_cell(f.question)}")
     if f.reviewer_note:

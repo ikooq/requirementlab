@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -49,6 +50,10 @@ class Score:
     findings_total: int = 0
     labels: dict[str, str] = field(default_factory=dict)        # находка -> true|false|dup
     precision: float | None = None
+    f1: float | None = None
+    exact_quote_share: float | None = None
+    per_severity: dict[str, dict[str, float | int]] = field(default_factory=dict)
+    duplicates: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> dict:
@@ -79,6 +84,9 @@ def score(report: dict, golden: dict, name: str = "", labels: dict | None = None
         s.warnings.append("SHA-256 документа в отчёте не совпадает с эталоном: строки могли сдвинуться.")
     findings = report.get("findings") or []
     s.findings_total = len(findings)
+    quotes = [e for f in findings for e in f.get("evidence", []) if "exact" in e]
+    if quotes:
+        s.exact_quote_share = sum(e["exact"] is True for e in quotes) / len(quotes)
     used: set[str] = set()
     for d in golden["defects"]:
         hit = [f for f in findings if matches(d, f)]
@@ -89,6 +97,7 @@ def score(report: dict, golden: dict, name: str = "", labels: dict | None = None
         else:
             s.missed.append(d["id"])
     s.extra = [f["id"] for f in findings if f["id"] not in used]
+    s.duplicates = [fid for ids in s.found.values() for fid in ids[1:]]
 
     defects = golden["defects"]
     total_w = sum(WEIGHT[d["severity"]] for d in defects)
@@ -97,9 +106,24 @@ def score(report: dict, golden: dict, name: str = "", labels: dict | None = None
     s.recall = len(s.found) / len(defects)
     s.weighted_recall = found_w / total_w
     s.critical_recall = (sum(d["id"] in s.found for d in crit) / len(crit)) if crit else 1.0
+    for sev in WEIGHT:
+        ds = [d for d in defects if d["severity"] == sev]
+        tp = sum(d["id"] in s.found for d in ds)
+        s.per_severity[sev] = {"tp": tp, "fn": len(ds) - tp,
+                               "recall": tp / len(ds) if ds else 1.0}
     s.matched_share = (len(used) / len(findings)) if findings else 0.0
     if labels is not None:
         _apply_labels(s, findings, used, labels)
+        s.duplicates = [fid for fid, label in s.labels.items() if label == "dup"]
+        if "unlabeled" not in s.labels.values() and s.precision is not None:
+            def harmonic(p, r):
+                return 2 * p * r / (p + r) if p + r else 0.0
+            s.f1 = harmonic(s.precision, s.recall)
+            for sev, metrics in s.per_severity.items():
+                group = [s.labels[f["id"]] for f in findings if f["severity"] == sev]
+                if group:
+                    metrics["precision"] = group.count("true") / len(group)
+                    metrics["f1"] = harmonic(metrics["precision"], metrics["recall"])
     return s
 
 
@@ -140,7 +164,16 @@ def render(scores: list[Score], golden: dict, reports: list[dict], verbose: bool
         ("Серьёзность совпала", [f"{sum(s.severity_ok.values())} из {len(s.found)}" for s in scores]),
         ("Находок в отчёте", [str(s.findings_total) for s in scores]),
         ("Находок вне эталона", [f"{len(s.extra)} ({_pct(1 - s.matched_share)})" for s in scores]),
+        ("Дубли", [str(len(s.duplicates)) for s in scores]),
+        ("Recall по тяжести", [", ".join(f"{k}: {_pct(v['recall'])}" for k,v in s.per_severity.items()) for s in scores]),
     ]
+    rows.append(("Дословные цитаты по журналу привязки", [
+        _pct(s.exact_quote_share) if s.exact_quote_share is not None else "—" for s in scores]))
+    if len(scores) > 1:
+        sets = [set(s.found) for s in scores]
+        agreed = len(set.intersection(*sets))
+        total = len(set.union(*sets))
+        out.insert(1, f"Стабильность обнаружения: во всех отчётах {agreed} из {total} дефектов, найденных хотя бы раз.")
     if any(s.precision is not None for s in scores):
         def cnt(s: Score, k: str) -> str:
             return str(list(s.labels.values()).count(k)) if s.precision is not None else "—"
@@ -150,6 +183,7 @@ def render(scores: list[Score], golden: dict, reports: list[dict], verbose: bool
               if s.precision is not None else "—" for s in scores]),
             ("Ложных / дублей / не размечено",
              [f"{cnt(s, 'false')} / {cnt(s, 'dup')} / {cnt(s, 'unlabeled')}" for s in scores]),
+            ("F1 (по размеченным находкам)", [_pct(s.f1 or 0) if s.f1 is not None else "—" for s in scores]),
         ]
     out += [f"| {k} | " + " | ".join(v) + " |" for k, v in rows]
     for s in scores:
@@ -191,14 +225,31 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-recall", type=float, default=None,
                     help="порог взвешенной полноты для CI (0..1)")
     ap.add_argument("--labels", help="ручная разметка находок (верно/ложно/дубль) для точности")
+    ap.add_argument("--holdout", action="store_true", help="использовать только эталон автоплатежа")
+    ap.add_argument("--min-critical-recall", type=float, help="минимальная полнота критичных дефектов")
+    ap.add_argument("--min-f1", type=float, help="минимальный F1; требует --labels")
     ap.add_argument("--json", dest="json_out", help="записать результат в JSON")
     ap.add_argument("-v", "--verbose", action="store_true", help="показать находки вне эталона")
     a = ap.parse_args(argv)
 
-    golden = json.loads(Path(a.golden).read_text(encoding="utf-8"))
+    path = DEFAULT_GOLDEN.with_name("golden_autopay.json") if a.holdout else Path(a.golden)
+    golden = json.loads(path.read_text(encoding="utf-8"))
     reports = [json.loads(Path(p).read_text(encoding="utf-8")) for p in a.reports]
     labels = json.loads(Path(a.labels).read_text(encoding="utf-8")) if a.labels else None
+    for report in reports:
+        sha = report.get("document", {}).get("sha256")
+        if golden.get("sha256") and sha and sha != golden["sha256"]:
+            ap.error("Отчёт и эталон относятся к разным документам")
+    if labels and labels.get("findings_sha256"):
+        for report in reports:
+            payload = json.dumps(report["findings"], ensure_ascii=False, sort_keys=True).encode()
+            if hashlib.sha256(payload).hexdigest() != labels["findings_sha256"]:
+                ap.error("Разметка относится к другой версии находок")
     scores = [score(r, golden, p, labels) for r, p in zip(reports, a.reports)]
+    if a.min_f1 is not None and (not a.labels or any(s.f1 is None or s.f1 < a.min_f1 for s in scores)):
+        print("F1 ниже порога или отсутствует ручная разметка", file=sys.stderr); return 1
+    if a.min_critical_recall is not None and any(s.critical_recall < a.min_critical_recall for s in scores):
+        print("Полнота критичных дефектов ниже порога", file=sys.stderr); return 1
     print(render(scores, golden, reports, a.verbose))
     if a.json_out:
         Path(a.json_out).write_text(json.dumps([s.to_json() for s in scores], ensure_ascii=False,

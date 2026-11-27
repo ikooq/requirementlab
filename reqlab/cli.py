@@ -66,7 +66,24 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--brief", action="store_true",
                    help="дополнительно записать короткий отчёт на один экран (<отчёт>-brief.md)")
     p.add_argument("--quiet", action="store_true", help="не печатать ход прогона")
+    p.add_argument("--resume", metavar="REPORT.json", help="пересобрать Markdown из готового JSON отчёта без повторного вызова модели")
     args = p.parse_args(argv)
+
+    if args.resume:
+        try:
+            from .pipeline import RunResult
+            saved = json.loads(Path(args.resume).read_text(encoding="utf-8"))
+            doc = load(args.input)
+            if (saved.get("document") or {}).get("sha256") != doc.sha256:
+                raise ValueError("SHA-256 документа не совпадает с сохранённым отчётом")
+            result = RunResult.from_json(saved, doc)
+            out = Path(args.output); out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(render(result), encoding="utf-8")
+            print(f"Отчёт восстановлен из {args.resume}: {out}")
+            return 0
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"Ошибка восстановления: {e}", file=sys.stderr)
+            return 2
 
     _load_env()
     verbose = not args.quiet

@@ -58,6 +58,8 @@ class Finding:
     related: list[str] = field(default_factory=list)
     source: str = "llm"        # llm | rule
     reviewer_note: str = ""
+    analyst_decision: str = "pending"  # pending | accepted | rejected
+    analyst_note: str = ""
 
 
 @dataclass
@@ -79,6 +81,10 @@ class RunResult:
     llm_calls: int
     cache_hits: int
     agent_version: str
+    stage_durations: dict[str, float] = field(default_factory=dict)
+    models_used: list[str] = field(default_factory=list)
+    retries: int = 0
+    request_log: list[dict] = field(default_factory=list)
 
     def to_json(self) -> dict:
         d = {k: v for k, v in asdict(self).items() if k != "doc"}
@@ -116,14 +122,19 @@ class Agent:
     # ------------------------------------------------------------------
     def run(self, doc: Document) -> RunResult:
         started, t0 = datetime.now().astimezone(), time.time()
+        stages: dict[str, float] = {}
         loc = Locator(doc)
         numbered = doc.numbered()
 
         self.log("1/5 Детерминированные проверки…")
+        stage_t = time.time()
         hits = rules.run(doc)
+        stages["rules"] = time.time() - stage_t
 
         self.log("2/5 Нарезка требований…")
+        stage_t = time.time()
         reqs, acs, skipped = self._segment(doc, numbered, loc)
+        stages["segmentation"] = time.time() - stage_t
         self.log(f"    требований: {len(reqs)}, критериев приёмки: {len(acs)}")
 
         # Шаги 3–4 выполняются несколько раз независимо, находки объединяются.
@@ -132,7 +143,9 @@ class Agent:
         raw: list[dict] = []
         set_verdicts: dict[str, dict] = {}
         for n in range(1, self.passes + 1):
+            stage_t = time.time()
             pass_raw, pass_verdicts = self._review_pass(doc, numbered, reqs, acs, hits, n)
+            stages[f"review_pass_{n}"] = time.time() - stage_t
             raw += pass_raw
             set_verdicts = _merge_set_verdicts(set_verdicts, pass_verdicts)
 
@@ -151,7 +164,9 @@ class Agent:
         dev, test, text, fixes = "", "", "", []
         if self.verify and findings:
             self.log("5/5 Второй ревьюер: отсев ложных находок и итог…")
+            stage_t = time.time()
             dev, test, text, fixes, more_dropped = self._critic(doc, numbered, findings)
+            stages["critic"] = time.time() - stage_t
             dropped += more_dropped
             findings = [f for f in findings if f.id not in {d["id"] for d in more_dropped}]
             # Дубли правил снимаем только после второго ревьюера: если он отклонил
@@ -177,7 +192,9 @@ class Agent:
             requirements=reqs, acceptance=acs, skipped=skipped, findings=findings,
             dropped=dropped, set_verdicts=set_verdicts, dev_ready=dev, test_ready=test,
             verdict_text=text, priority_fixes=fixes, llm_calls=self.llm.calls,
-            cache_hits=self.llm.cache_hits, agent_version=self.agent_version)
+            cache_hits=self.llm.cache_hits, agent_version=self.agent_version,
+            stage_durations=stages, models_used=list(self.llm.models_used),
+            retries=getattr(self.llm, "retries", 0), request_log=list(self.llm.request_log))
 
     # --- шаг 2: нарезка ----------------------------------------------
     def _segment(self, doc: Document, numbered: str, loc: Locator):

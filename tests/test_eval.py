@@ -70,7 +70,7 @@ def test_cli_min_recall_exit_code(tmp_path: Path, capsys):
     assert "1 из 3" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("name", ["golden.json", "golden_autopay.json"])
+@pytest.mark.parametrize("name", ["golden.json", "golden_autopay.json", "golden_freeze.json"])
 def test_real_golden_is_valid(name):
     root = Path(__file__).parent.parent
     golden = json.loads((root / "eval" / name).read_text(encoding="utf-8"))
@@ -83,7 +83,8 @@ def test_real_golden_is_valid(name):
             re.compile(k)
     # эталон привязан к конкретному тексту: строки считаются по этому файлу
     from reqlab.loader import load
-    doc = load(root / golden["document"])
+    document = root / golden["document"]
+    doc = load(document)
     assert doc.sha256 == golden["sha256"]
     for d in golden["defects"]:
         assert all(1 <= n <= len(doc.lines) for n in d["lines"] or [])

@@ -93,6 +93,8 @@ class LLM:
         self.temperature = temperature
         self.verbose = verbose
         self.calls = 0          # реальные обращения к API
+        self.retries = 0
+        self.request_log = []
         self.cache_hits = 0
         self.models_used: list[str] = []
         # (номер ключа, модель) с исчерпанной дневной квотой
@@ -146,12 +148,22 @@ class LLM:
         attempt = 0
         # Лимит попыток считается на модель: переход на запасную модель даёт ей
         # полный набор попыток, иначе до последних запасных дело не доходит.
+        requests_made = 0
         while attempt < self.max_retries:
             attempt += 1
             self._throttle()
             try:
                 t0 = time.time()
-                text = self._call(system, prompt)
+                if requests_made:
+                    self.retries += 1
+                requests_made += 1
+                entry = {"step": step, "model": self.model, "retry": requests_made > 1}
+                self.request_log.append(entry)
+                start = time.monotonic()
+                try:
+                    text = self._call(system, prompt)
+                finally:
+                    entry["duration_s"] = round(time.monotonic() - start, 3)
                 self.calls += 1
                 if self.model not in self.models_used:
                     self.models_used.append(self.model)
