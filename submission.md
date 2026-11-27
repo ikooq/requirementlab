@@ -1,6 +1,6 @@
 # RequirementLab — текст для подачи
 
-**Репозиторий:** https://github.com/ikooq/requirementlab
+**Репозиторий:** https://github.com/ikooq/requirementlab/tree/audit-work
 **Отчёт агента:** `reports/report.md` (и `reports/report.json`), приложен к подаче
 **Проверяемый документ:** `docs/requirements.md` из репозитория организаторов, приложен к подаче
 
@@ -13,7 +13,7 @@ RequirementLab — AI-агент статического ревью требо�
 - 27 требований, 40 нарушений, из них 4 критичных. Итог: разработку и тестирование начинать нельзя.
 - Найдены все ключевые противоречия: Ф-3 и Ф-4 (лимит push), AC-2 и Ф-2 (месяц покупки), цель «в момент покупки» против учёта только проведённых покупок, суммы в тиынах против порога в тенге, сохранение через GET, ответ 200 с `ERROR` вместо 400, типы `amount`/`enabled` в запросе и ответе, 403/404, отсутствующий метод чтения настроек.
 - Качество измерено: мы собрали эталон из 41 дефекта кейса, и отчёт находит 37 из 41 (90%) и все 6 критичных. 35 дефектов эталона составлены вручную до прогонов агента, по ним результат 31 из 35 (89%); ещё 6 — находки агента, которых не было в эталоне и которые подтвердились при проверке по документу.
-- Проверено вслепую: мы написали второе ТЗ (автоплатёж за мобильную связь) с 30 заложенными дефектами и закоммитили эталон до первого прогона. За один проход агент нашёл все 5 критичных противоречий и 22 из 30 дефектов (73%) по скрипту, 24 из 30 (80%) по ручной сверке. Промпты под этот документ не менялись. Скрипт оценки лежит в репозитории (`eval/score.py`).
+- Проверено вслепую: мы написали второе ТЗ (автоплатёж за мобильную связь) с 30 заложенными дефектами и закоммитили эталон до первого прогона. За один проход агент нашёл все 5 критичных противоречий и 22 из 30 дефектов (73%) по скрипту, 24 из 30 (80%) по ручной сверке. После публикации первого результата этот документ использовался для регрессий. Скрипт оценки лежит в репозитории (`eval/score.py`).
 
 ## Чем решение отличается
 
@@ -28,10 +28,10 @@ RequirementLab — AI-агент статического ревью требо�
 ## Как воспроизвести
 
 ```bash
-git clone https://github.com/ikooq/requirementlab && cd requirementlab
+git clone --branch audit-work https://github.com/ikooq/requirementlab && cd requirementlab
 python -m pip install -r requirements.txt
 cp .env.example .env            # Windows: copy .env.example .env — впишите GEMINI_API_KEY
-curl -L --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/main/docs/requirements.md
+curl -L --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md
 python run.py docs/requirements.md reports/report.md
 ```
 

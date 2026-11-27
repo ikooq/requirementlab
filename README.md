@@ -27,7 +27,7 @@ AI-агент для **BCC-HUB × MNU FinTech Hackathon 2026** ([кейс](https
 Нужен Python 3.10 или новее.
 
 ```bash
-git clone https://github.com/ikooq/requirementlab && cd requirementlab
+git clone --branch audit-work https://github.com/ikooq/requirementlab && cd requirementlab
 python -m pip install -r requirements.txt
 cp .env.example .env          # Windows: copy .env.example .env
 # впишите GEMINI_API_KEY в .env
@@ -36,7 +36,7 @@ cp .env.example .env          # Windows: copy .env.example .env
 Документ кейса скачивается из репозитория организаторов:
 
 ```bash
-curl -L --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/main/docs/requirements.md
+curl -L --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md
 ```
 
 На Windows `curl.exe` работает так же. Если вместо Python открывается Microsoft Store, запускайте через `py` вместо `python`.
@@ -195,7 +195,7 @@ python eval/score.py reports/report.json --labels eval/labels_case.json # и т�
 
 ### Слепая проверка
 
-Чтобы проверить, что агент не подогнан под документ кейса, мы написали второе ТЗ — автоплатёж за мобильную связь ([`docs/blind/autopay.md`](docs/blind/autopay.md)) — и заложили в него 30 дефектов: 5 критичных противоречий, 19 существенных, 6 незначительных. Эталон [`eval/golden_autopay.json`](eval/golden_autopay.json) закоммичен вместе с документом в коммите `85ec081`, до первого прогона агента; после прогона ни эталон, ни промпты под этот документ не менялись.
+Чтобы проверить, что агент не подогнан под документ кейса, мы написали второе ТЗ — автоплатёж за мобильную связь ([`docs/blind/autopay.md`](docs/blind/autopay.md)) — и заложили в него 30 дефектов: 5 критичных противоречий, 19 существенных, 6 незначительных. Эталон [`eval/golden_autopay.json`](eval/golden_autopay.json) закоммичен вместе с документом в коммите `85ec081`, до первого прогона агента; Первый результат относится к версии до разбора ошибок. В дальнейшем автоплатёж использовался как регрессионный кейс.
 
 ```bash
 python eval/score.py reports/blind/autopay.json --golden eval/golden_autopay.json -v
@@ -257,3 +257,28 @@ CI загружает версию документа организаторов
 ## Чистый прогон с возможностью продолжить
 
 Для контрольного замера добавьте `--fresh-run`. Агент создаст отдельный каталог в `.cache/runs` и напечатает ID до первого обращения к модели. После каждого корректного ответа агент сохранит его локально. При остановке повторите ту же команду, заменив `--fresh-run` на `--continue-run ID`. Документ и параметры проверки должны совпасть. При изменении промпта соответствующий запрос выполнится заново. Содержимое каталога включает ответы модели с фрагментами документа и хранится до ручного удаления.
+
+## Повторные измерения и сверка прогонов
+
+| Документ | Режим | Найдено по эталону | Всего замечаний |
+|---|---|---:|---:|
+| Автоплатёж | Опубликованный отчёт | 22/30 | 38 |
+| Автоплатёж | Один проход Flash Lite 3.5 | 20/30 | 44 |
+| Автоплатёж | Два прохода Flash Lite 3.1 | 23/30 | 41 |
+| Автоплатёж | Сверка трёх отчётов | 29/30 | 70 |
+| Автоплатёж | Сверка с дополнительной фильтрацией | 23/30 | 35 |
+| Блокировка карты | Исправлено ошибочное объединение, повтор на сохранённых ответах | 4/4 | 10 |
+| Выписка | Первый прогон по заранее зафиксированному эталону | 6/7 | 8 |
+| Выписка | Два прохода | 7/7 | 14 |
+
+Для выписки [эталон](eval/golden_statement.json) зафиксирован до запуска. Во втором отчёте при последующей [сверке Codex](eval/labels_statement_two_pass.json) подтвердились 12 из 14 замечаний. Полнота составила 100%, точность — 85,7%, F1 — 92,3%. Все три критичных дефекта обнаружены. Документ синтетический. Влияние числа проходов на автоплатеже отдельно от влияния модели в этих экспериментах не измерялось.
+
+Сверка нескольких отчётов полезна для поиска пропусков. Результат содержит отдельный перечень находок с номерами исходных отчётов, исходных находок и проверенными цитатами. Основной отчёт сохраняет матрицы требований и итоговое решение. Для воспроизведения из корня репозитория:
+
+    python -m reqlab.reconcile docs/blind/autopay.md reports/blind/autopay.json reports/blind/autopay-candidate.json reports/blind/autopay-two-pass.json --model gemini-3.5-flash-lite --output reports/blind/autopay-consensus.json
+    python -m eval.evidence docs/blind/autopay.md reports/blind/autopay-consensus.json
+    python eval/score.py reports/blind/autopay-consensus.json --holdout
+
+Флаг `--thorough` добавляет проверку групп соседних замечаний. Для отдельного измерения укажите другой выходной файл. Офлайн-просмотр находок основного отчёта с переходом к строкам исходника включён в архив GitHub Actions. Его можно собрать локально:
+
+    python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
