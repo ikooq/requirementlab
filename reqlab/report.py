@@ -135,8 +135,8 @@ def render(res: RunResult) -> str:
         ("Шаги", "правила → нарезка → проверка требований → проверка набора → привязка цитат → второй ревьюер"),
         ("Вызовы модели", _calls(res)),
         ("Использованные модели", ", ".join(res.models_used) or res.model),
-        ("Повторы API", str(res.retries)),
-        ("Время по этапам", ", ".join(f"{k}: {v:.1f} с" for k, v in res.stage_durations.items())),
+        ("Повторы API", str(res.retries) if res.stage_durations or res.request_log else "не записано"),
+        ("Время по этапам", ", ".join(f"{k}: {v:.1f} с" for k, v in res.stage_durations.items()) or "не записано"),
         ("Отсеяно находок", f"{len(res.dropped)} (неподтверждённая цитата или отклонено вторым ревьюером)"),
     ]
     for parent in res.lineage:

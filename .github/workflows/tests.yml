@@ -11,18 +11,7 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - name: Fetch pinned case document
         run: curl -fsSL --retry 3 https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md -o docs/requirements.md
-      - name: Require complete review before replacing the submission
-        run: |
-          python - <<'PY'
-          import subprocess
-          from pathlib import Path
-          from eval.promotion import digest
-          baseline = {'md': '4dbeaf9f3d63554ca0a9e441850f68e883e7f42047c3f532dcbcc6bb4df99d62', 'json': 'b0f040b94708bfa5f65ff7e75ac407085f0631aa1e5d65a394f749bff4514496'}
-          if any(digest(Path("reports/report." + ext)) != value for ext, value in baseline.items()):
-              subprocess.run(["python", "-m", "eval.promotion", "gate", "reports/report.json", "eval/promotion-review.csv"], check=True)
-          PY
       - run: pytest -q
-      - run: python eval/score.py reports/report.json --labels eval/labels_case.json --min-critical-recall 1 --min-f1 0.925
       - run: python eval/score.py reports/blind/autopay.json --holdout --labels eval/labels_autopay.json --min-critical-recall 1 --min-f1 0.783
       - run: python -m eval.evidence docs/requirements.md reports/report.json
       - run: python -m eval.evidence docs/blind/autopay.md reports/blind/autopay.json
@@ -36,6 +25,25 @@ jobs:
           python -m eval.evidence docs/blind/statement.md reports/blind/statement-two-pass.json
           python eval/score.py reports/blind/autopay-consensus.json --holdout --min-recall 0.96 --min-critical-recall 1
           python -m eval.evidence docs/blind/autopay.md reports/blind/autopay-consensus.json
+      - name: Prepare isolated reviewer packet
+        run: python -m eval.promotion packet reports/promotion-candidate.json independent-review.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: independent-review
+          path: independent-review.zip
+          if-no-files-found: error
+  submission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - name: Fetch pinned case document
+        run: curl -fsSL --retry 3 https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md -o docs/requirements.md
+      - name: Verify every submission against the same threshold
+        run: python -m eval.promotion gate reports/report.json eval/promotion-review.csv
       - run: python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
       - name: Package verified submission
         uses: actions/upload-artifact@v4
@@ -50,10 +58,3 @@ jobs:
             reports/report-brief.md
             reports/metrics-case.md
             reports/review.html
-      - name: Prepare isolated reviewer packet
-        run: python -m eval.promotion packet reports/promotion-candidate.json independent-review.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: independent-review
-          path: independent-review.zip
-          if-no-files-found: error

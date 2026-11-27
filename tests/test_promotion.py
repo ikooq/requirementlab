@@ -4,8 +4,10 @@ import json
 
 import pytest
 
-from eval.promotion import FIELDS, ROOT, digest, gate
+from eval.promotion import DOC, FIELDS, ROOT, digest, gate
 
+
+pytestmark = pytest.mark.skipif(not DOC.exists(), reason="Organizer case document is downloaded separately")
 
 REPORT = ROOT / "reports/promotion-candidate.json"
 
