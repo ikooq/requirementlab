@@ -52,6 +52,56 @@ def _calls(res: RunResult) -> str:
     return f"{res.llm_calls} (+{res.cache_hits} из кэша), {res.duration_s:.0f} с"
 
 
+def _head(w, res: RunResult, sev: Counter, limit: int, more: str) -> None:
+    doc = res.doc
+    w(f"> Итог: разработку начинать — **{READY_RU.get(res.dev_ready, res.dev_ready)}**, "
+      f"тестирование — **{READY_RU.get(res.test_ready, res.test_ready)}**. "
+      f"Требований: {len(res.requirements)}, нарушений: {len(res.findings)} "
+      f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
+    w("")
+    top = top_findings(res.findings, limit)
+    if top:
+        w("**Главное — что исправить до старта разработки:**")
+        w("")
+        for f in top:
+            e = f.evidence[0]
+            w(f"{SEV_ICON[f.severity]} **{f.id}** ({name(f.criterion)}, "
+              f"{doc.location(e.line_start, e.line_end)}) — {_cell(_first_sentence(f.problem), 200)}")
+            w("")
+        rest = sev["critical"] - sum(1 for f in top if f.severity == "critical")
+        if rest > 0:
+            w(f"Ещё критичных: {rest} — {more}.")
+            w("")
+
+
+def render_brief(res: RunResult) -> str:
+    """Короткая версия на один экран: итог, главные дефекты, счёт по критериям и что исправить.
+    Полный отчёт по структуре ТЗ строится функцией render."""
+    sev = Counter(f.severity for f in res.findings)
+    out: list[str] = []
+    w = out.append
+    w(f"# Кратко: проверка требований «{res.doc.title}»")
+    w("")
+    _head(w, res, sev, 7, "см. полный отчёт, раздел 5")
+    crit_counter = Counter(f.criterion for f in res.findings)
+    w("Нарушения по критериям: " + ", ".join(
+        f"{name(code)} — {n}" for code, n in crit_counter.most_common()) + ".")
+    w("")
+    fixes = res.priority_fixes or [
+        {"action": f.recommendation or f.problem, "finding_ids": [f.id]}
+        for f in sorted(res.findings, key=lambda x: SEVERITIES.index(x.severity))[:5]]
+    w("**Что исправить в первую очередь:**")
+    w("")
+    for n, fx in enumerate(fixes, 1):
+        ids = ", ".join(fx.get("finding_ids") or [])
+        w(f"{n}. {_cell(fx['action'])}" + (f" ({ids})" if ids else ""))
+    w("")
+    w(f"Модель: {res.model}. Агент: {res.agent_version}. Каждая цитата в полном отчёте "
+      "проверена по тексту документа; номера находок совпадают с полным отчётом.")
+    w("")
+    return "\n".join(out) + "\n"
+
+
 def render(res: RunResult) -> str:
     doc = res.doc
     reqs = res.requirements
@@ -64,24 +114,7 @@ def render(res: RunResult) -> str:
 
     w(f"# Отчёт о проверке требований: «{doc.title}»")
     w("")
-    w(f"> Итог: разработку начинать — **{READY_RU.get(res.dev_ready, res.dev_ready)}**, "
-      f"тестирование — **{READY_RU.get(res.test_ready, res.test_ready)}**. "
-      f"Требований: {len(reqs)}, нарушений: {len(res.findings)} "
-      f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
-    w("")
-    top = top_findings(res.findings)
-    if top:
-        w("**Главное — что исправить до старта разработки:**")
-        w("")
-        for f in top:
-            e = f.evidence[0]
-            w(f"{SEV_ICON[f.severity]} **{f.id}** ({name(f.criterion)}, "
-              f"{doc.location(e.line_start, e.line_end)}) — {_cell(_first_sentence(f.problem), 200)}")
-            w("")
-        rest = sev["critical"] - sum(1 for f in top if f.severity == "critical")
-        if rest > 0:
-            w(f"Ещё критичных: {rest} — см. раздел 5.")
-            w("")
+    _head(w, res, sev, 5, "см. раздел 5")
 
     # 1. Паспорт ------------------------------------------------------------
     w("## 1. Паспорт прогона")

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+
+import pytest
 
 from eval.score import main, matches, score
 
@@ -67,11 +70,20 @@ def test_cli_min_recall_exit_code(tmp_path: Path, capsys):
     assert "1 из 3" in capsys.readouterr().out
 
 
-def test_real_golden_is_valid():
-    golden = json.loads((Path(__file__).parent.parent / "eval" / "golden.json")
-                        .read_text(encoding="utf-8"))
+@pytest.mark.parametrize("name", ["golden.json", "golden_autopay.json"])
+def test_real_golden_is_valid(name):
+    root = Path(__file__).parent.parent
+    golden = json.loads((root / "eval" / name).read_text(encoding="utf-8"))
     ids = [d["id"] for d in golden["defects"]]
     assert len(ids) == len(set(ids))
     for d in golden["defects"]:
         assert d["severity"] in ("critical", "major", "minor")
         assert d["keywords"]
+        for k in d["keywords"]:
+            re.compile(k)
+    # эталон привязан к конкретному тексту: строки считаются по этому файлу
+    from reqlab.loader import load
+    doc = load(root / golden["document"])
+    assert doc.sha256 == golden["sha256"]
+    for d in golden["defects"]:
+        assert all(1 <= n <= len(doc.lines) for n in d["lines"] or [])

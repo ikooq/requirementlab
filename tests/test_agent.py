@@ -12,7 +12,7 @@ from reqlab.grounding import Locator
 from reqlab.llm import LLM, parse_json
 from reqlab.loader import LoadError, load
 from reqlab.pipeline import Agent
-from reqlab.report import render
+from reqlab.report import render, render_brief
 
 SPEC = """# Перевод между счетами
 
@@ -395,4 +395,7 @@ def test_full_pipeline_and_report(spec):
         assert section in md
     assert "fake / fake-1" in md
     assert "строка 5" in md
+    brief = render_brief(res)
+    assert "Итог: разработку начинать — **Нет**" in brief
+    assert "## 3." not in brief and len(brief) < len(md) / 2
     json.dumps(res.to_json(), ensure_ascii=False)

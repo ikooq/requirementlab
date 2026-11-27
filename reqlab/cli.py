@@ -12,7 +12,7 @@ from . import __version__
 from .llm import LLMError, from_env
 from .loader import LoadError, load
 from .pipeline import Agent
-from .report import render
+from .report import render, render_brief
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -63,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
                         "1 — вдвое меньше запросов к модели)")
     p.add_argument("--no-verify", action="store_true", help="пропустить второго ревьюера")
     p.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов модели")
+    p.add_argument("--brief", action="store_true",
+                   help="дополнительно записать короткий отчёт на один экран (<отчёт>-brief.md)")
     p.add_argument("--quiet", action="store_true", help="не печатать ход прогона")
     args = p.parse_args(argv)
 
@@ -95,6 +97,10 @@ def main(argv: list[str] | None = None) -> int:
     json_path = out.with_suffix(".json")
     json_path.write_text(json.dumps(result.to_json(), ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Отчёт: {out}\nДанные: {json_path}")
+    if args.brief:
+        brief_path = out.with_name(out.stem + "-brief.md")
+        brief_path.write_text(render_brief(result), encoding="utf-8")
+        print(f"Кратко: {brief_path}")
     print(f"Требований: {len(result.requirements)}, нарушений: {len(result.findings)}, "
           f"разработку начинать: {result.dev_ready}")
     return 0
