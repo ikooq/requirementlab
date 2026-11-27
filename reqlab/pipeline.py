@@ -255,10 +255,14 @@ class Agent:
             r.id = f"R-{n:02d}"
 
         acs = []
-        for n, item in enumerate(data.get("acceptance_criteria") or [], 1):
+        for item in data.get("acceptance_criteria") or []:
             quote = str(item.get("quote") or "").strip()
             m = loc.find(quote, _int(item.get("line"))) if quote else None
-            acs.append({"id": f"AC-{n}", "line": m.start if m else _int(item.get("line")),
+            if not m:
+                continue
+            if not m.exact:
+                quote = doc_text(doc, m.start, m.end)
+            acs.append({"id": f"AC-{len(acs) + 1}", "line": m.start,
                         "quote": quote, "summary": str(item.get("summary") or "")})
         skipped = [s for s in (data.get("skipped") or []) if isinstance(s, dict)]
         return reqs, acs, skipped

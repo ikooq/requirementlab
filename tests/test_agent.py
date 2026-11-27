@@ -559,3 +559,17 @@ def test_acceptance_button_trace(tmp_path, clicked, other_screen, count):
     assert len(hits) == count
     if hits:
         assert (hits[0].related_line[0], hits[0].line_start) == (1, 4)
+
+
+def test_invented_acceptance_criterion_cannot_unlock_testing(spec):
+    class Fabricated(FakeLLM):
+        def _call(self, system, user):
+            if "нарезать документ" in user:
+                data = json.loads(super()._call(system, user))
+                data["acceptance_criteria"] = [{"line": 4, "quote": "ZXQ made-up acceptance criterion"}]
+                return json.dumps(data)
+            return super()._call(system, user)
+
+    result = Agent(Fabricated(), verbose=False).run(load(spec))
+    assert result.acceptance == []
+    assert result.test_ready == "no"
