@@ -20,6 +20,30 @@ def _cell(s: str, limit: int = 0) -> str:
     return s
 
 
+# Порядок важности критериев внутри одной серьёзности: противоречие и непроверяемость
+# блокируют сильнее, чем неполнота, а она — сильнее оформления.
+_CRIT_RANK = ["S-CON", "COR", "VER", "S-VAL", "CMP", "S-CMP", "APP", "FEA", "UNA", "TRC", "S-TRC"]
+
+
+def top_findings(findings: list[Finding], limit: int = 5) -> list[Finding]:
+    """Выжимка для первого экрана: все критичные, затем существенные находки модели
+    по важности критерия. Находки правил (оформление) сюда не идут — они в разделе 4.2."""
+    def key(f: Finding):
+        rank = _CRIT_RANK.index(f.criterion) if f.criterion in _CRIT_RANK else len(_CRIT_RANK)
+        return (SEVERITIES.index(f.severity), rank, f.id)
+    pool = [f for f in findings if f.source != "rule" and f.severity in ("critical", "major")]
+    return sorted(pool, key=key)[:limit]
+
+
+def _first_sentence(text: str) -> str:
+    """Первое предложение описания: в выжимке нужна суть, подробности — в разделах 3–4."""
+    s = " ".join(str(text).split())
+    for i, ch in enumerate(s):
+        if ch in ".!?" and i >= 40 and (i + 1 == len(s) or s[i + 1] == " "):
+            return s[:i + 1]
+    return s
+
+
 def _calls(res: RunResult) -> str:
     if res.llm_calls == 0 and res.cache_hits:
         return (f"{res.cache_hits}, все из кэша `.cache/llm`: ответы модели получены в предыдущем "
@@ -45,6 +69,19 @@ def render(res: RunResult) -> str:
       f"Требований: {len(reqs)}, нарушений: {len(res.findings)} "
       f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
     w("")
+    top = top_findings(res.findings)
+    if top:
+        w("**Главное — что исправить до старта разработки:**")
+        w("")
+        for f in top:
+            e = f.evidence[0]
+            w(f"{SEV_ICON[f.severity]} **{f.id}** ({name(f.criterion)}, "
+              f"{doc.location(e.line_start, e.line_end)}) — {_cell(_first_sentence(f.problem), 200)}")
+            w("")
+        rest = sev["critical"] - sum(1 for f in top if f.severity == "critical")
+        if rest > 0:
+            w(f"Ещё критичных: {rest} — см. раздел 5.")
+            w("")
 
     # 1. Паспорт ------------------------------------------------------------
     w("## 1. Паспорт прогона")
