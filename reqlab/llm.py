@@ -59,7 +59,7 @@ class _Retryable(Exception):
         return self.status == 429 and (self.wait is None or self.wait > 65)
 
 
-def parse_json(text: str) -> dict:
+def parse_json(text: str, *, findings_only: bool = False) -> dict:
     text = text.strip()
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.S)
     if fence:
@@ -71,6 +71,16 @@ def parse_json(text: str) -> dict:
         if start < 0 or end <= start:
             raise ValueError("в ответе нет JSON-объекта")
         data = json.loads(text[start:end + 1])
+    if findings_only:
+        if isinstance(data, list):
+            data = {"findings": data}
+        items = data.get("findings") if isinstance(data, dict) else None
+        if not isinstance(items, list) or not all(
+                isinstance(item, dict) and isinstance(item.get("problem"), str)
+                and item["problem"].strip() and isinstance(item.get("quotes"), list)
+                and any(isinstance(q, str) and q.strip() for q in item["quotes"])
+                for item in items):
+            raise ValueError("ожидался список findings с описанием и цитатами")
     if not isinstance(data, dict):
         raise ValueError("ожидался JSON-объект")
     return data
@@ -188,7 +198,8 @@ class LLM:
                 time.sleep(wait)
                 continue
             try:
-                data = parse_json(text)
+                data = parse_json(text, findings_only=step.startswith(
+                    ("поиск противоречий", "поиск пропущенных сценариев")))
             except (ValueError, json.JSONDecodeError) as e:
                 last_err = f"невалидный JSON: {e}"
                 bad_json += 1

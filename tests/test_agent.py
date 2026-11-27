@@ -598,3 +598,15 @@ def test_duplicates_preserve_evidence_but_shared_intro_is_not_a_duplicate():
     assert _dedupe([a, b, c]) == [a, c]
     assert a.severity == "critical"
     assert [e.line_start for e in a.evidence] == [4, 9]
+
+
+def test_findings_only_repairs_array_envelope_locally():
+    item = {"problem": "Расхождение", "quotes": ["Строка документа"]}
+    for data in ([item], {"findings": [item]}):
+        assert parse_json(json.dumps(data), findings_only=True) == {"findings": [item]}
+    assert parse_json("[]", findings_only=True) == {"findings": []}
+    for raw in ("{}", "[{}]", '{"findings": null}', '[{"problem": "missing source"}]'):
+        with pytest.raises(ValueError):
+            parse_json(raw, findings_only=True)
+    with pytest.raises(ValueError):
+        parse_json("[]")
