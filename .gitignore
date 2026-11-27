@@ -11,3 +11,4 @@ venv/
 Thumbs.db
 # входной документ организаторов берётся из их репозитория, а не хранится здесь
 docs/requirements.md
+docs/requirements.pdf

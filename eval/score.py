@@ -3,11 +3,17 @@
     python eval/score.py reports/report.json
     python eval/score.py old.json new.json          # сравнить два прогона
     python eval/score.py reports/report.json --min-recall 0.8   # для CI: код 1, если ниже
+    python eval/score.py reports/report.json --labels eval/labels_case.json  # и точность
 
 Находка засчитывается за эталонный дефект, если её цитата попадает в строки
 дефекта (допуск ±1) и текст находки подходит под все группы ключевых слов.
 Находки, не попавшие ни в один дефект, выводятся отдельно: это либо ложные
 срабатывания, либо дефекты, которых нет в эталоне (тогда эталон стоит дополнить).
+
+Точность считается по ручной разметке (--labels): каждая находка — «верно»,
+«ложно» или «дубль». Находка, совпавшая с дефектом эталона, по умолчанию верна;
+находка вне эталона без метки считается неразмеченной. Метка привязана к началу
+текста находки: после пересборки отчёта старые метки не применяются молча.
 """
 
 from __future__ import annotations
@@ -41,6 +47,8 @@ class Score:
     critical_recall: float = 0.0
     matched_share: float = 0.0
     findings_total: int = 0
+    labels: dict[str, str] = field(default_factory=dict)        # находка -> true|false|dup
+    precision: float | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> dict:
@@ -64,7 +72,7 @@ def matches(defect: dict, finding: dict) -> bool:
     return all(re.search(_norm(g), text) for g in defect.get("keywords") or [])
 
 
-def score(report: dict, golden: dict, name: str = "") -> Score:
+def score(report: dict, golden: dict, name: str = "", labels: dict | None = None) -> Score:
     s = Score(report=name)
     sha = (report.get("document") or {}).get("sha256")
     if golden.get("sha256") and sha and sha != golden["sha256"]:
@@ -90,7 +98,30 @@ def score(report: dict, golden: dict, name: str = "") -> Score:
     s.weighted_recall = found_w / total_w
     s.critical_recall = (sum(d["id"] in s.found for d in crit) / len(crit)) if crit else 1.0
     s.matched_share = (len(used) / len(findings)) if findings else 0.0
+    if labels is not None:
+        _apply_labels(s, findings, used, labels)
     return s
+
+
+LABELS = ("true", "false", "dup")
+_KEY_LEN = 40
+
+
+def _apply_labels(s: Score, findings: list[dict], used: set[str], labels: dict) -> None:
+    marks = labels.get("labels") or {}
+    for f in findings:
+        m = marks.get(f["id"])
+        if m and _norm(m.get("problem", ""))[:_KEY_LEN] != _norm(f.get("problem", ""))[:_KEY_LEN]:
+            s.warnings.append(f"метка {f['id']} относится к другой находке (отчёт пересобран?) — пропущена")
+            m = None
+        if m and m.get("label") in LABELS:
+            s.labels[f["id"]] = m["label"]
+        elif f["id"] in used:
+            s.labels[f["id"]] = "true"
+        else:
+            s.labels[f["id"]] = "unlabeled"
+    vals = list(s.labels.values())
+    s.precision = vals.count("true") / len(vals) if vals else None
 
 
 def _pct(x: float) -> str:
@@ -110,6 +141,16 @@ def render(scores: list[Score], golden: dict, reports: list[dict], verbose: bool
         ("Находок в отчёте", [str(s.findings_total) for s in scores]),
         ("Находок вне эталона", [f"{len(s.extra)} ({_pct(1 - s.matched_share)})" for s in scores]),
     ]
+    if any(s.precision is not None for s in scores):
+        def cnt(s: Score, k: str) -> str:
+            return str(list(s.labels.values()).count(k)) if s.precision is not None else "—"
+        rows += [
+            ("Точность (верные / все находки)",
+             [f"{cnt(s, 'true')} из {s.findings_total} ({_pct(s.precision)})"
+              if s.precision is not None else "—" for s in scores]),
+            ("Ложных / дублей / не размечено",
+             [f"{cnt(s, 'false')} / {cnt(s, 'dup')} / {cnt(s, 'unlabeled')}" for s in scores]),
+        ]
     out += [f"| {k} | " + " | ".join(v) + " |" for k, v in rows]
     for s in scores:
         out += [f"> ⚠️ {Path(s.report).name}: {w}" for w in s.warnings]
@@ -149,13 +190,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--golden", default=str(DEFAULT_GOLDEN))
     ap.add_argument("--min-recall", type=float, default=None,
                     help="порог взвешенной полноты для CI (0..1)")
+    ap.add_argument("--labels", help="ручная разметка находок (верно/ложно/дубль) для точности")
     ap.add_argument("--json", dest="json_out", help="записать результат в JSON")
     ap.add_argument("-v", "--verbose", action="store_true", help="показать находки вне эталона")
     a = ap.parse_args(argv)
 
     golden = json.loads(Path(a.golden).read_text(encoding="utf-8"))
     reports = [json.loads(Path(p).read_text(encoding="utf-8")) for p in a.reports]
-    scores = [score(r, golden, p) for r, p in zip(reports, a.reports)]
+    labels = json.loads(Path(a.labels).read_text(encoding="utf-8")) if a.labels else None
+    scores = [score(r, golden, p, labels) for r, p in zip(reports, a.reports)]
     print(render(scores, golden, reports, a.verbose))
     if a.json_out:
         Path(a.json_out).write_text(json.dumps([s.to_json() for s in scores], ensure_ascii=False,

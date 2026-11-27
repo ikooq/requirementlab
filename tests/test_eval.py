@@ -87,3 +87,27 @@ def test_real_golden_is_valid(name):
     assert doc.sha256 == golden["sha256"]
     for d in golden["defects"]:
         assert all(1 <= n <= len(doc.lines) for n in d["lines"] or [])
+
+
+def test_precision_from_manual_labels():
+    rep = {"document": {"sha256": "abc"}, "findings": [
+        _f("F-1", 10, "Метод объявлен как GET"),            # в эталоне — верно по умолчанию
+        _f("F-2", 10, "Сохранение через GET небезопасно"),  # в эталоне, но размечено как дубль
+        _f("F-3", 50, "Шаг объединяет три проверки"),       # вне эталона, ложная
+        _f("F-4", 60, "Нет идемпотентности"),               # вне эталона, без метки
+    ]}
+    labels = {"labels": {
+        "F-2": {"label": "dup", "problem": "Сохранение через GET небезопасно"},
+        "F-3": {"label": "false", "problem": "Шаг объединяет три проверки"},
+    }}
+    s = score(rep, GOLDEN, "r.json", labels)
+    assert s.labels == {"F-1": "true", "F-2": "dup", "F-3": "false", "F-4": "unlabeled"}
+    assert s.precision == 0.25
+
+
+def test_stale_label_is_ignored_with_warning():
+    rep = {"document": {"sha256": "abc"}, "findings": [_f("F-1", 50, "Совсем другая находка")]}
+    labels = {"labels": {"F-1": {"label": "false", "problem": "Шаг объединяет три проверки"}}}
+    s = score(rep, GOLDEN, "r.json", labels)
+    assert s.labels == {"F-1": "unlabeled"}
+    assert any("другой находке" in w for w in s.warnings)
