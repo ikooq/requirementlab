@@ -575,18 +575,20 @@ def _dedupe(findings: list[Finding]) -> list[Finding]:
     Почти одинаковые — основное место (первая цитата) на тех же строках и описания
     проблемы совпадают по словам хотя бы наполовину. Так склеиваются повторы из двух
     проходов, а разные дефекты на одной строке остаются разными."""
-    seen, out = set(), []
-    for f in findings:
-        key = (f.scope, f.criterion, f.evidence[0].line_start, f.problem[:50].lower())
-        if key in seen:
-            continue
-        twin = next((g for g in out if g.source == f.source == "llm" and _same_place(g, f)
-                     and _similar(g.problem, f.problem) >= 0.5), None)
-        if twin:
-            _absorb(twin, f)
-            continue
-        seen.add(key)
-        out.append(f)
+    out: list[Finding] = []
+    for finding in findings:
+        # A shared opening or source line is not enough to establish a duplicate.
+        for previous in out:
+            if (previous.scope != finding.scope or previous.source != finding.source
+                    or previous.criterion != finding.criterion or not _same_place(previous, finding)):
+                continue
+            same_text = previous.problem.strip().casefold() == finding.problem.strip().casefold()
+            if same_text or (finding.source == "llm" and _similar(previous.problem, finding.problem) >= 0.5
+                             and previous.problem[:50].casefold() != finding.problem[:50].casefold()):
+                _absorb(previous, finding)
+                break
+        else:
+            out.append(finding)
     return out
 
 

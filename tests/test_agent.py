@@ -587,3 +587,14 @@ def test_critic_keeps_conflict_separate_from_missing_test_coverage(spec):
     *_, dropped = Agent(Critic(), verbose=False)._critic(load(spec), "", [trace, conflict])
     assert dropped == []
     assert trace.severity == "major"
+
+
+def test_duplicates_preserve_evidence_but_shared_intro_is_not_a_duplicate():
+    from reqlab.pipeline import _dedupe
+    intro = "В данном требовании к поведению сервиса отсутствует описание "
+    a = _f("", "R-01", "minor", intro + "отмены", [4])
+    b = _f("", "R-01", "critical", a.problem, [4, 9])
+    c = _f("", "R-01", "major", intro + "восстановления", [4])
+    assert _dedupe([a, b, c]) == [a, c]
+    assert a.severity == "critical"
+    assert [e.line_start for e in a.evidence] == [4, 9]
