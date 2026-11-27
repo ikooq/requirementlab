@@ -1,7 +1,7 @@
 {
   "model": "gemini / gemini-3.5-flash, gemini-3.7-flash, gemini-3.6-flash",
-  "started": "2026-11-27T11:06:47+05:00",
-  "duration_s": 0.17682623863220215,
+  "started": "2026-11-27T12:16:43+05:00",
+  "duration_s": 0.39606237411499023,
   "requirements": [
     {
       "id": "R-01",
@@ -1853,7 +1853,7 @@
   ],
   "llm_calls": 0,
   "cache_hits": 10,
-  "agent_version": "v1.1.4 (git v1.1.4-4-g9261e4c)",
+  "agent_version": "v1.2.0 (git v1.2.0)",
   "document": {
     "name": "requirements.md",
     "title": "Уведомление о расходах по карте",
