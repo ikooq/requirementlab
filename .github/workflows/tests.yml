@@ -14,3 +14,5 @@ jobs:
       - run: pytest -q
       - run: python eval/score.py reports/report.json --labels eval/labels_case.json --min-critical-recall 1 --min-f1 0.925
       - run: python eval/score.py reports/blind/autopay.json --holdout --labels eval/labels_autopay.json --min-critical-recall 1 --min-f1 0.783
+      - run: python -m eval.evidence docs/requirements.md reports/report.json
+      - run: python -m eval.evidence docs/blind/autopay.md reports/blind/autopay.json
