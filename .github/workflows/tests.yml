@@ -20,6 +20,7 @@ jobs:
         run: |
           python eval/score.py reports/blind/card-freeze.json --golden eval/golden_freeze.json --min-recall 1 --min-critical-recall 1
           python -m eval.evidence docs/blind/card-freeze.md reports/blind/card-freeze.json
+      - run: python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
       - name: Package verified submission
         uses: actions/upload-artifact@v4
         with:
@@ -32,3 +33,4 @@ jobs:
             reports/report.json
             reports/report-brief.md
             reports/metrics-case.md
+            reports/review.html
