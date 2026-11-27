@@ -32,7 +32,7 @@ jobs:
           path: reports/review.html
           if-no-files-found: error
       - name: Prepare isolated reviewer packet
-        run: python -m eval.promotion packet reports/promotion-candidate.json independent-review.zip
+        run: python -m eval.promotion packet reports/report.json independent-review.zip
       - uses: actions/upload-artifact@v4
         with:
           name: independent-review
