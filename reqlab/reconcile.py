@@ -21,8 +21,13 @@ def partition(reply, count):
     ids = [i for group in groups for i in group] + rejected
     if any(type(i) is not int for i in ids):
         raise ValueError("номера кандидатов должны быть целыми числами")
-    if Counter(ids) != Counter(range(1, count + 1)):
-        raise ValueError("каждый кандидат должен встречаться ровно один раз")
+    actual = Counter(ids)
+    expected = set(range(1, count + 1))
+    if set(actual) != expected or any(n != 1 for n in actual.values()):
+        missing = sorted(expected - set(actual))
+        extra = sorted(set(actual) - expected)
+        repeated = sorted(i for i, n in actual.items() if n > 1)
+        raise ValueError(f"пропущены {missing}, неизвестны {extra}, повторены {repeated}")
     return groups, rejected
 
 
