@@ -77,6 +77,11 @@ class FakeLLM(LLM):
                               ensure_ascii=False)
         if "найти ПРОТИВОРЕЧИЯ" in user:
             return json.dumps({"findings": []})
+        if "ПРОПУЩЕННЫЕ СЦЕНАРИИ" in user:
+            return json.dumps({"findings": [
+                {"criterion": "S-MOD", "severity": "minor", "quotes": ["Сервис отвечает в течение 2 секунд."],
+                 "related": ["R-03"], "problem": "Правило повторено в двух местах.",
+                 "recommendation": "Оставить одно место.", "question": "?"}]}, ensure_ascii=False)
         if "второй ревьюер" in user:
             return "```json\n" + json.dumps({
                 "decisions": [], "dev_ready": "yes", "test_ready": "yes",
@@ -320,6 +325,16 @@ def test_rule_placeholder_dropped_only_when_llm_finding_survives():
     assert _drop_covered_placeholders(rule + [other]) == rule + [other]
 
 
+def test_rules_detect_type_mismatch_between_tables(tmp_path):
+    p = tmp_path / "api.md"
+    p.write_text("| Parameter | Format |\n| :--- | :--- |\n| `amount` | integer |\n| `id` | string |\n\n"
+                 "Ответ\n\n| Parameter | Format |\n| :--- | :--- |\n| `amount` | string |\n"
+                 "| `id` | string |\n", encoding="utf-8")
+    hits = [h for h in rules.run(load(p)) if h.rule == "type-mismatch"]
+    assert [(h.line_start, h.criterion) for h in hits] == [(10, "S-CON")]
+    assert "строке 3" in hits[0].problem
+
+
 def test_parse_json_handles_fences():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert parse_json('Вот ответ: {"a": 2} конец') == {"a": 2}
@@ -370,6 +385,8 @@ def test_full_pipeline_and_report(spec):
     assert r3.verdicts["CMP"] == "unknown"
     # модель сказала «yes», но есть критичная находка — решение «нет»
     assert res.dev_ready == "no"
+    # находка шага пропущенных сценариев дошла до отчёта
+    assert any(f.criterion == "S-MOD" and f.scope == "SET" for f in res.findings)
 
     md = render(res)
     for section in ("## 1. Паспорт прогона", "## 2. Как агент нарезал требования",

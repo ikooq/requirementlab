@@ -58,6 +58,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--provider", help="gemini | openai (по умолчанию из .env)")
     p.add_argument("--model", help="имя модели (по умолчанию из .env)")
     p.add_argument("--batch-size", type=int, default=6, help="требований в одном запросе к модели")
+    p.add_argument("--passes", type=int, default=2,
+                   help="независимых проходов проверки, находки объединяются (по умолчанию 2; "
+                        "1 — вдвое меньше запросов к модели)")
     p.add_argument("--no-verify", action="store_true", help="пропустить второго ревьюера")
     p.add_argument("--no-cache", action="store_true", help="не использовать кэш ответов модели")
     p.add_argument("--quiet", action="store_true", help="не печатать ход прогона")
@@ -79,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"RequirementLab {version}: «{doc.title}» ({len(doc.lines)} строк), модель {llm.label}",
               file=sys.stderr)
     agent = Agent(llm, batch_size=args.batch_size, verify=not args.no_verify,
-                  agent_version=version, verbose=verbose)
+                  agent_version=version, verbose=verbose, passes=args.passes)
     try:
         result = agent.run(doc)
     except LLMError as e:

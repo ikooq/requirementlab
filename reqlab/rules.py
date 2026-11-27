@@ -41,6 +41,49 @@ class RuleHit:
     recommendation: str
 
 
+_NAME_COLS = ("parameter", "параметр", "поле", "field", "name")
+_TYPE_COLS = ("format", "формат", "type", "тип")
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip().strip("`").strip() for c in line.strip().strip("|").split("|")]
+
+
+def _type_mismatches(doc: Document) -> list[RuleHit]:
+    """Один и тот же параметр в разных таблицах (запрос, ответ) объявлен с разным типом."""
+    seen: dict[str, tuple[str, int]] = {}
+    hits: list[RuleHit] = []
+    name_i = type_i = None
+    for i, line in enumerate(doc.lines, 1):
+        s = line.strip()
+        if not s.startswith("|"):
+            name_i = type_i = None
+            continue
+        if _SEPARATOR_RE.match(s):
+            continue
+        cells = _cells(s)
+        low = [c.lower() for c in cells]
+        ni = next((k for k, c in enumerate(low) if c in _NAME_COLS), None)
+        ti = next((k for k, c in enumerate(low) if c in _TYPE_COLS), None)
+        if ni is not None and ti is not None:  # строка заголовка новой таблицы
+            name_i, type_i = ni, ti
+            continue
+        if name_i is None or max(name_i, type_i) >= len(cells):
+            continue
+        name, typ = cells[name_i], cells[type_i].lower()
+        if not name or not typ:
+            continue
+        if name in seen and seen[name][0] != typ:
+            first_typ, first_line = seen[name]
+            hits.append(RuleHit(
+                "type-mismatch", "S-CON", "major", i, i, s,
+                f"Параметр `{name}` объявлен с разными типами: «{first_typ}» в строке "
+                f"{first_line} и «{typ}» в строке {i}.",
+                f"Задать для `{name}` один тип во всех таблицах и примерах."))
+        seen.setdefault(name, (typ, i))
+    return hits
+
+
 def run(doc: Document) -> list[RuleHit]:
     hits: list[RuleHit] = []
     checkbox_lines: list[int] = []
@@ -74,6 +117,7 @@ def run(doc: Document) -> list[RuleHit]:
                 "empty-row", "DOC", "major", i, i, s,
                 "Пустая строка таблицы: данные не внесены.",
                 "Заполнить таблицу (например, ответственных и согласующих)."))
+    hits += _type_mismatches(doc)
     if checkbox_lines:
         a, b = checkbox_lines[0], checkbox_lines[-1]
         hits.append(RuleHit(

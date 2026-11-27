@@ -90,9 +90,11 @@ class RunResult:
 
 class Agent:
     def __init__(self, llm: LLM, *, batch_size: int = 6, verify: bool = True,
-                 agent_version: str = "", verbose: bool = True):
+                 agent_version: str = "", verbose: bool = True, passes: int = 1):
         self.llm = llm
         self.batch_size = max(1, batch_size)
+        self.passes = max(1, passes)
+        self._note = ""  # добавка к промпту в повторных проходах
         self.verify = verify
         self.agent_version = agent_version
         self.verbose = verbose
@@ -114,18 +116,15 @@ class Agent:
         reqs, acs, skipped = self._segment(doc, numbered, loc)
         self.log(f"    требований: {len(reqs)}, критериев приёмки: {len(acs)}")
 
-        self.log("3/5 Проверка каждого требования…")
+        # Шаги 3–4 выполняются несколько раз независимо, находки объединяются.
+        # Один проход модели ловит ~80% дефектов, но каждый раз немного разные;
+        # объединение двух проходов на кейсе дало 91%. Дубли снимает второй ревьюер.
         raw: list[dict] = []
-        for i in range(0, len(reqs), self.batch_size):
-            batch = reqs[i:i + self.batch_size]
-            self.log(f"    пакет {batch[0].id}…{batch[-1].id}")
-            raw += self._check_batch(doc, numbered, reqs, batch, hits)
-
-        self.log("4/5 Проверка набора требований целиком…")
-        set_verdicts, set_raw = self._check_set(doc, numbered, reqs, acs, raw)
-        raw += set_raw
-        self.log("    поиск противоречий…")
-        raw += self._conflicts(doc, numbered, reqs, acs, raw)
+        set_verdicts: dict[str, dict] = {}
+        for n in range(1, self.passes + 1):
+            pass_raw, pass_verdicts = self._review_pass(doc, numbered, reqs, acs, hits, n)
+            raw += pass_raw
+            set_verdicts = _merge_set_verdicts(set_verdicts, pass_verdicts)
 
         findings, dropped = self._ground(raw, loc)
         findings += self._rule_findings(hits)
@@ -223,6 +222,42 @@ class Agent:
         skipped = [s for s in (data.get("skipped") or []) if isinstance(s, dict)]
         return reqs, acs, skipped
 
+    # --- шаги 3–4 одним проходом ---------------------------------------
+    def _review_pass(self, doc, numbered, reqs, acs, hits, n: int):
+        """Один независимый проход проверки. Первый проход — обычный. Следующие
+        группируют требования в пакеты со сдвигом и помечают промпт как перепроверку:
+        модель видит требования в другом окружении и отвечает заново, а не из кэша."""
+        tag = f" (проход {n}/{self.passes})" if self.passes > 1 else ""
+        self._note = "" if n == 1 else (
+            f"\n\nНезависимая перепроверка №{n}: другой ревьюер уже проверял этот документ. "
+            "Проверь заново и самостоятельно, не полагаясь на чужие выводы; особенно ищи то, "
+            "что легко пропустить при первом чтении.")
+        offset = 0 if n == 1 else (self.batch_size // 2) * (n - 1) % self.batch_size
+        cuts = [0] + list(range(offset or self.batch_size, len(reqs), self.batch_size)) + [len(reqs)]
+
+        self.log(f"3/5 Проверка каждого требования{tag}…")
+        raw: list[dict] = []
+        for a, b in zip(cuts, cuts[1:]):
+            batch = reqs[a:b]
+            if not batch:
+                continue
+            self.log(f"    пакет {batch[0].id}…{batch[-1].id}")
+            raw += self._check_batch(doc, numbered, reqs, batch, hits)
+
+        self.log(f"4/5 Проверка набора требований целиком{tag}…")
+        set_verdicts, set_raw = self._check_set(doc, numbered, reqs, acs, raw)
+        raw += set_raw
+        self.log("    поиск противоречий…")
+        raw += self._conflicts(doc, numbered, reqs, acs, raw)
+        self.log("    поиск пропущенных сценариев…")
+        raw += self._gaps(doc, numbered, reqs, raw)
+        self._note = ""
+        return raw, set_verdicts
+
+    def _ask(self, user: str, step: str) -> dict:
+        tag = "" if not self._note else " (перепроверка)"
+        return self.llm.complete_json(prompts.SYSTEM, user + self._note, step=step + tag)
+
     # --- шаг 3: проверка требований ------------------------------------
     def _check_batch(self, doc, numbered, reqs, batch, hits) -> list[dict]:
         lines = set()
@@ -234,8 +269,7 @@ class Agent:
             criteria=prompts.individual_criteria(), severity=prompts.CHECK_GUIDE,
             hints=hint_txt, all_reqs=_req_list(reqs), targets=_req_targets(batch),
             title=doc.title, doc=numbered)
-        data = self.llm.complete_json(prompts.SYSTEM, user,
-                                      step=f"проверка {batch[0].id}…{batch[-1].id}")
+        data = self._ask(user, f"проверка {batch[0].id}…{batch[-1].id}")
         by_id = {r.id: r for r in batch}
         out: list[dict] = []
         for res in data.get("results") or []:
@@ -243,7 +277,8 @@ class Agent:
             if not r:
                 continue
             verdicts = res.get("verdicts") or {}
-            r.verdicts = {c.code: _verdict(verdicts.get(c.code)) for c in INDIVIDUAL}
+            new = {c.code: _verdict(verdicts.get(c.code)) for c in INDIVIDUAL}
+            r.verdicts = _merge_verdicts(r.verdicts, new)
             for f in res.get("findings") or []:
                 out.append({**f, "scope": r.id, "_hint": r.line_start})
         missing = [r.id for r in batch if not r.verdicts]
@@ -259,7 +294,7 @@ class Agent:
         user = prompts.CHECK_SET.format(
             criteria=prompts.set_criteria(), severity=prompts.CHECK_GUIDE,
             all_reqs=_req_list(reqs), acs=ac_txt, known=known, title=doc.title, doc=numbered)
-        data = self.llm.complete_json(prompts.SYSTEM, user, step="проверка набора")
+        data = self._ask(user, "проверка набора")
         verdicts = {}
         for c in SET:
             v = (data.get("verdicts") or {}).get(c.code) or {}
@@ -278,8 +313,21 @@ class Agent:
         ac_txt = "\n".join(f"- {a['id']} (строка {a['line']}): {a['quote']}" for a in acs) or "нет"
         user = prompts.CONFLICTS.format(known=known, reqs=req_txt, acs=ac_txt,
                                         title=doc.title, doc=numbered)
-        data = self.llm.complete_json(prompts.SYSTEM, user, step="поиск противоречий")
+        data = self._ask(user, "поиск противоречий")
         return [{**f, "scope": "SET", "criterion": f.get("criterion") or "S-CON"}
+                for f in data.get("findings") or []]
+
+    def _gaps(self, doc, numbered, reqs, raw) -> list[dict]:
+        """Отдельный проход на пропущенные сценарии: в общей проверке набора модель
+        их часто пропускает, увлекшись противоречиями."""
+        known = "\n".join(f"- {f.get('scope')} {f.get('criterion')}: {str(f.get('problem'))[:140]}"
+                          for f in raw) or "нет"
+        req_txt = "\n".join(f"- {r.id} [{r.doc_id or 'без номера'}; строки {r.line_start}–"
+                            f"{r.line_end}]: «{r.quote}»" for r in reqs)
+        user = prompts.GAPS.format(severity=prompts.CHECK_GUIDE, known=known, reqs=req_txt,
+                                   title=doc.title, doc=numbered)
+        data = self._ask(user, "поиск пропущенных сценариев")
+        return [{**f, "scope": "SET", "criterion": f.get("criterion") or "S-CMP"}
                 for f in data.get("findings") or []]
 
     # --- привязка цитат --------------------------------------------------
@@ -461,6 +509,25 @@ def _req_list(reqs: list[Requirement]) -> str:
 def _req_targets(batch: list[Requirement]) -> str:
     return "\n".join(f"{r.id} [{r.doc_id or 'без номера'}; раздел «{r.section}»; строки "
                      f"{r.line_start}–{r.line_end}]: «{r.quote}»" for r in batch)
+
+
+def _merge_verdicts(old: dict[str, str], new: dict[str, str]) -> dict[str, str]:
+    """Вердикты двух проходов: «нарушено» из любого прохода сильнее «выполнено»."""
+    if not old:
+        return new
+    rank = {"fail": 0, "pass": 1, "na": 2, "unknown": 3}
+    return {k: min(old.get(k, "unknown"), new.get(k, "unknown"), key=lambda v: rank.get(v, 3))
+            for k in set(old) | set(new)}
+
+
+def _merge_set_verdicts(old: dict[str, dict], new: dict[str, dict]) -> dict[str, dict]:
+    """Оценка набора по проходам: берём худшую с её комментарием."""
+    rank = {"fail": 0, "partial": 1, "pass": 2, "unknown": 3}
+    out = dict(old)
+    for code, v in new.items():
+        if code not in out or rank.get(v["status"], 3) < rank.get(out[code]["status"], 3):
+            out[code] = v
+    return out
 
 
 def _verdict(v) -> str:
