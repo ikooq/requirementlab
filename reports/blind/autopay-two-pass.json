@@ -1,0 +1,2252 @@
+{
+  "model": "gemini / gemini-3.1-flash-lite",
+  "started": "2026-11-27T20:02:53+05:00",
+  "duration_s": 558.8699376583099,
+  "requirements": [
+    {
+      "id": "R-01",
+      "doc_id": null,
+      "section": "Дефект документа",
+      "line_start": 5,
+      "line_end": 5,
+      "quote": "Документ подготовлен для проверки агентом требований и не используется в продуктивной разработке.",
+      "summary": "Дефект: обращение к ИИ/агенту в тексте документа.",
+      "kind": "process",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "fail",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-02",
+      "doc_id": null,
+      "section": "Дизайн процесса UI",
+      "line_start": 30,
+      "line_end": 30,
+      "quote": "Платежи → Мобильная связь → Автоплатёж.",
+      "summary": "Определен путь к разделу автоплатежа в интерфейсе.",
+      "kind": "ui",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-03",
+      "doc_id": null,
+      "section": "Дизайн процесса UI",
+      "line_start": 30,
+      "line_end": 30,
+      "quote": "На экране поля «Номер телефона» (маска +7 XXX XXX XX XX), «Сумма, ₸», «День списания», выбор карты и кнопка «Подключить».",
+      "summary": "Определены поля ввода и кнопка на экране подключения автоплатежа.",
+      "kind": "ui",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "fail",
+        "VER": "pass",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-04",
+      "doc_id": null,
+      "section": "BPMN схема процесса",
+      "line_start": 35,
+      "line_end": 35,
+      "quote": "Наступление дня списания → проверка баланса карты → списание → зачисление оператору → SMS клиенту → завершение.",
+      "summary": "Описана последовательность шагов бизнес-процесса автоплатежа.",
+      "kind": "process",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "pass",
+        "VER": "unknown",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-05",
+      "doc_id": "Ф-1",
+      "section": "Функциональные требования",
+      "line_start": 38,
+      "line_end": 38,
+      "quote": "Ф-1. Клиент подключает автоплатёж с любой своей карты на номер оператора Казахстана. Сумма — целое число от 100 до 50 000 ₸ включительно.",
+      "summary": "Требования к источнику средств, оператору и диапазону суммы автоплатежа.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "unknown",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-06",
+      "doc_id": "Ф-2",
+      "section": "Функциональные требования",
+      "line_start": 39,
+      "line_end": 39,
+      "quote": "Ф-2. Списание выполняется 1-го числа каждого месяца.",
+      "summary": "Установлена дата ежемесячного списания средств.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-07",
+      "doc_id": "Ф-3",
+      "section": "Функциональные требования",
+      "line_start": 40,
+      "line_end": 40,
+      "quote": "Ф-3. Если на карте недостаточно средств, платёж в этом месяце не выполняется, повторных попыток нет. Клиент уведомляется.",
+      "summary": "Правила обработки недостатка средств на карте.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-08",
+      "doc_id": "Ф-4",
+      "section": "Функциональные требования",
+      "line_start": 41,
+      "line_end": 41,
+      "quote": "Ф-4. Клиент может приостановить автоплатёж и возобновить его в мобильном банке.",
+      "summary": "Возможность управления статусом автоплатежа клиентом.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "unknown",
+        "VER": "fail",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-09",
+      "doc_id": "Ф-5",
+      "section": "Функциональные требования",
+      "line_start": 42,
+      "line_end": 42,
+      "quote": "Ф-5. При неуспешном списании система повторяет попытку три раза с интервалом в сутки.",
+      "summary": "Правила повторных попыток при неуспешном списании.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "unknown",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-10",
+      "doc_id": "Ф-6",
+      "section": "Функциональные требования",
+      "line_start": 43,
+      "line_end": 43,
+      "quote": "Ф-6. Клиент выбирает номер, сумму, день и карту, подтверждает подключение и получает SMS с подтверждением.",
+      "summary": "Процесс выбора параметров и подтверждения подключения автоплатежа.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-11",
+      "doc_id": "Ф-7",
+      "section": "Функциональные требования",
+      "line_start": 44,
+      "line_end": 44,
+      "quote": "Ф-7. На один номер телефона допускается один активный автоплатёж.",
+      "summary": "Ограничение на количество активных автоплатежей для одного номера.",
+      "kind": "functional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-12",
+      "doc_id": null,
+      "section": "Нефункциональные требования",
+      "line_start": 50,
+      "line_end": 50,
+      "quote": "Списание выполняется быстро и надёжно.",
+      "summary": "Требование к производительности и надежности списания.",
+      "kind": "nonfunctional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "unknown",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-13",
+      "doc_id": null,
+      "section": "Нефункциональные требования",
+      "line_start": 50,
+      "line_end": 50,
+      "quote": "Сервис должен выдерживать высокую нагрузку в первый день месяца.",
+      "summary": "Требование к нагрузочной способности сервиса.",
+      "kind": "nonfunctional",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "unknown",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-14",
+      "doc_id": null,
+      "section": "Требования к данным",
+      "line_start": 53,
+      "line_end": 53,
+      "quote": "Хранится история списаний.",
+      "summary": "Требование к хранению истории операций.",
+      "kind": "data",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "unknown",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-15",
+      "doc_id": null,
+      "section": "Требования к данным",
+      "line_start": 53,
+      "line_end": 53,
+      "quote": "Для каждого автоплатежа хранятся номер, сумма, день списания, карта и статус.",
+      "summary": "Перечень атрибутов автоплатежа для хранения.",
+      "kind": "data",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-16",
+      "doc_id": null,
+      "section": "Требования к интеграции",
+      "line_start": 56,
+      "line_end": 56,
+      "quote": "Платёжный шлюз возвращает результат списания синхронно.",
+      "summary": "Требование к синхронному ответу от платежного шлюза.",
+      "kind": "integration",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "fail",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-17",
+      "doc_id": null,
+      "section": "Требования к интеграции",
+      "line_start": 56,
+      "line_end": 56,
+      "quote": "Оператор связи подтверждает зачисление в течение 5 минут.",
+      "summary": "Требование к времени подтверждения зачисления оператором.",
+      "kind": "integration",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-18",
+      "doc_id": "Логика, шаг 1",
+      "section": "Логика работы метода",
+      "line_start": 114,
+      "line_end": 114,
+      "quote": "1. Проверить пользовательскую сессию.",
+      "summary": "Проверка сессии пользователя при создании автоплатежа.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "unknown",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-19",
+      "doc_id": "Логика, шаг 2",
+      "section": "Логика работы метода",
+      "line_start": 115,
+      "line_end": 115,
+      "quote": "2. Проверить, что карта принадлежит клиенту.",
+      "summary": "Проверка принадлежности карты клиенту.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "fail",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-20",
+      "doc_id": "Логика, шаг 3",
+      "section": "Логика работы метода",
+      "line_start": 116,
+      "line_end": 116,
+      "quote": "3. Проверить номер, сумму и день списания.",
+      "summary": "Валидация входных параметров автоплатежа.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "fail",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "unknown",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-21",
+      "doc_id": "Логика, шаг 4",
+      "section": "Логика работы метода",
+      "line_start": 117,
+      "line_end": 117,
+      "quote": "4. Если на номер уже есть активный автоплатёж — вернуть 400.",
+      "summary": "Обработка дублирования автоплатежа на один номер.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-22",
+      "doc_id": "Логика, шаг 5",
+      "section": "Логика работы метода",
+      "line_start": 118,
+      "line_end": 118,
+      "quote": "5. Создать автоплатёж и вернуть его идентификатор и дату ближайшего списания.",
+      "summary": "Создание записи и возврат данных ответа.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "fail",
+        "VER": "fail",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-23",
+      "doc_id": "Параметр phone",
+      "section": "Параметры запроса",
+      "line_start": 126,
+      "line_end": 126,
+      "quote": "phone | string | 10 | Да | 10 цифр без кода страны | Номер телефона | phone",
+      "summary": "Описание параметра phone.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "fail",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-24",
+      "doc_id": "Параметр amount",
+      "section": "Параметры запроса",
+      "line_start": 127,
+      "line_end": 127,
+      "quote": "amount | integer | 32 bit | Да | 1–5 000 000 | Сумма в тенге | amount_kzt",
+      "summary": "Описание параметра amount.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-25",
+      "doc_id": "Параметр day",
+      "section": "Параметры запроса",
+      "line_start": 128,
+      "line_end": 128,
+      "quote": "day | integer | 2 | Да | 1–31 | День списания | pay_day",
+      "summary": "Описание параметра day.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-26",
+      "doc_id": "Параметр cardId",
+      "section": "Параметры запроса",
+      "line_start": 129,
+      "line_end": 129,
+      "quote": "cardId | string | 1–64 | Да | Карта клиента | Идентификатор карты | card_id",
+      "summary": "Описание параметра cardId.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-27",
+      "doc_id": "Параметр autopayId",
+      "section": "Ответ",
+      "line_start": 135,
+      "line_end": 135,
+      "quote": "autopayId | string | При успехе | Идентификатор автоплатежа | autopay_id",
+      "summary": "Описание параметра ответа autopayId.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-28",
+      "doc_id": "Параметр nextDate",
+      "section": "Ответ",
+      "line_start": 136,
+      "line_end": 136,
+      "quote": "nextDate | string | DD.MM.YYYY | Дата ближайшего списания | next_date",
+      "summary": "Описание параметра ответа nextDate.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "fail",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-29",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 140,
+      "line_end": 140,
+      "quote": "200. Автоплатёж создан.",
+      "summary": "Описание статуса 200.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "pass",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-30",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 141,
+      "line_end": 141,
+      "quote": "400. Некорректные параметры.",
+      "summary": "Описание статуса 400.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "unknown",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "fail",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-31",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 142,
+      "line_end": 142,
+      "quote": "401. Нет авторизации.",
+      "summary": "Описание статуса 401.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "fail",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "unknown",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    },
+    {
+      "id": "R-32",
+      "doc_id": null,
+      "section": "Статусы",
+      "line_start": 143,
+      "line_end": 143,
+      "quote": "409. Автоплатёж на этот номер уже существует.",
+      "summary": "Описание статуса 409.",
+      "kind": "api",
+      "verdicts": {
+        "SNG": "pass",
+        "TRC": "pass",
+        "APP": "pass",
+        "COR": "unknown",
+        "UNA": "pass",
+        "VER": "pass",
+        "CMP": "pass",
+        "CNF": "pass",
+        "NEC": "pass",
+        "FEA": "pass"
+      }
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC-1",
+      "line": 67,
+      "quote": "Автоплатёж 2 000 ₸, день списания 15, на карте 10 000 ₸ | Наступает 15-е число | Списано 2 000 ₸, клиент получил SMS",
+      "summary": "Успешное списание автоплатежа."
+    },
+    {
+      "id": "AC-2",
+      "line": 68,
+      "quote": "Клиент вводит сумму 60 000 ₸ | Нажимает «Сохранить» | Автоплатёж создан",
+      "summary": "Создание автоплатежа с суммой вне лимита (дефект логики)."
+    },
+    {
+      "id": "AC-3",
+      "line": 69,
+      "quote": "На номер уже есть активный автоплатёж | Клиент подключает второй | Показано сообщение «Автоплатёж уже подключён»",
+      "summary": "Попытка создания дублирующего автоплатежа."
+    }
+  ],
+  "skipped": [
+    {
+      "section": "Заголовки и паспорт",
+      "reason": "Техническая информация, не являющаяся требованиями."
+    },
+    {
+      "section": "Цели",
+      "reason": "Описание целей, не является нормативным требованием."
+    },
+    {
+      "section": "Архитектура решения",
+      "reason": "Описание архитектуры, не является нормативным требованием."
+    },
+    {
+      "section": "Тестирование требований",
+      "reason": "Информационный раздел."
+    },
+    {
+      "section": "Ревью требований",
+      "reason": "Чек-лист для ревью."
+    },
+    {
+      "section": "Блок согласующих",
+      "reason": "Блок согласующих."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "scope": "R-01",
+      "criterion": "NEC",
+      "severity": "critical",
+      "problem": "Документ содержит обращение к ИИ и прямо заявляет о нецелевом использовании, что блокирует разработку.",
+      "recommendation": "Удалить данное требование и все упоминания агента/ИИ из документа.",
+      "question": "Является ли данный документ официальным ТЗ для разработки?",
+      "evidence": [
+        {
+          "quote": "Документ подготовлен для проверки агентом требований и не используется в продуктивной разработке.",
+          "line_start": 5,
+          "line_end": 5,
+          "exact": true
+        },
+        {
+          "quote": "Метод создаёт автоплатёж за мобильную связь.",
+          "line_start": 94,
+          "line_end": 94,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-01"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-002",
+      "scope": "R-03",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Противоречие между Ф-1 (до 50 000) и описанием параметра amount в API (до 5 000 000).",
+      "recommendation": "Привести все части документа к единому ограничению суммы.",
+      "question": "Какое ограничение суммы является верным: 50 000 или 5 000 000?",
+      "evidence": [
+        {
+          "quote": "«Сумма, ₸»",
+          "line_start": 30,
+          "line_end": 30,
+          "exact": true
+        },
+        {
+          "quote": "amount | integer | 32 bit | Да | 1–5 000 000 | Сумма в тенге | amount_kzt",
+          "line_start": 127,
+          "line_end": 127,
+          "exact": false
+        },
+        {
+          "quote": "Сумма — целое число от 100 до 50 000 ₸ включительно.",
+          "line_start": 38,
+          "line_end": 38,
+          "exact": true
+        },
+        {
+          "quote": "Для каждого автоплатежа хранятся номер, сумма, день списания, карта и статус.",
+          "line_start": 53,
+          "line_end": 53,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-05",
+        "R-24"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-003",
+      "scope": "R-03",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не указан формат ввода суммы (целое число или с копейками), что противоречит Ф-1 (целое число).",
+      "recommendation": "Уточнить: «Сумма, ₸ (целое число)».",
+      "question": "Допустим ли ввод дробных значений в UI?",
+      "evidence": [
+        {
+          "quote": "«Сумма, ₸»",
+          "line_start": 30,
+          "line_end": 30,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-004",
+      "scope": "R-03",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не определен способ выбора дня списания (выпадающий список, поле ввода) и ограничения (например, 29-31 число для коротких месяцев).",
+      "recommendation": "Указать тип элемента управления и правила валидации для дат.",
+      "question": "Как система обрабатывает выбор 31-го числа для месяцев, где 30 дней?",
+      "evidence": [
+        {
+          "quote": "«День списания»",
+          "line_start": 30,
+          "line_end": 30,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-005",
+      "scope": "R-04",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Схема процесса (R-04) противоречит функциональным требованиям Ф-3 и Ф-5. Схема не учитывает логику обработки недостатка средств и повторных попыток, что делает процесс неполным и противоречивым.",
+      "recommendation": "Актуализировать BPMN-схему, добавив ветвление после проверки баланса и цикл повторных попыток согласно Ф-5.",
+      "question": "Какая логика является приоритетной: упрощенная схема или детальные функциональные требования?",
+      "evidence": [
+        {
+          "quote": "Наступление дня списания → проверка баланса карты → списание → зачисление оператору → SMS клиенту → завершение.",
+          "line_start": 35,
+          "line_end": 35,
+          "exact": true
+        },
+        {
+          "quote": "Ф-3. Если на карте недостаточно средств, платёж в этом месяце не выполняется, повторных попыток нет.",
+          "line_start": 40,
+          "line_end": 40,
+          "exact": true
+        },
+        {
+          "quote": "Ф-5. При неуспешном списании система повторяет попытку три раза с интервалом в сутки.",
+          "line_start": 42,
+          "line_end": 42,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-07",
+        "R-09"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-006",
+      "scope": "R-06",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не определено поведение для месяцев, в которых нет 31-го числа (если выбрано 31-е) или для февраля.",
+      "recommendation": "Уточнить логику списания для коротких месяцев.",
+      "question": "Что происходит, если день списания 31-е число?",
+      "evidence": [
+        {
+          "quote": "Списание выполняется 1-го числа каждого месяца.",
+          "line_start": 39,
+          "line_end": 39,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-007",
+      "scope": "R-06",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Требование Ф-2 жестко задает 1-е число, в то время как параметр API `day` позволяет выбирать любой день от 1 до 31. Это делает Ф-2 неполным или неверным.",
+      "recommendation": "Изменить Ф-2 на: «Клиент может выбрать день списания от 1 до 31 числа месяца».",
+      "question": "Действительно ли списание возможно только 1-го числа, или это ограничение будет снято?",
+      "evidence": [
+        {
+          "quote": "Ф-2. Списание выполняется 1-го числа каждого месяца.",
+          "line_start": 39,
+          "line_end": 39,
+          "exact": true
+        },
+        {
+          "quote": "| `day` | integer | 2 | Да | 1–31 | День списания | `pay_day` |",
+          "line_start": 128,
+          "line_end": 128,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-06",
+        "R-25"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-008",
+      "scope": "R-08",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не описаны бизнес-правила приостановки: меняется ли дата следующего списания, что происходит с уже запланированными платежами, есть ли ограничения по статусу.",
+      "recommendation": "Дополнить описание логикой изменения статуса и влияния на график списаний.",
+      "question": "Как именно меняется состояние автоплатежа при приостановке?",
+      "evidence": [
+        {
+          "quote": "Ф-4. Клиент может приостановить автоплатёж и возобновить его в мобильном банке.",
+          "line_start": 41,
+          "line_end": 41,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-08"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-009",
+      "scope": "R-08",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствуют критерии приёмки или API-методы для реализации функционала приостановки/возобновления.",
+      "recommendation": "Добавить методы API для управления статусом или критерии приёмки для проверки изменения статуса.",
+      "question": "Где описан интерфейс взаимодействия для приостановки автоплатежа?",
+      "evidence": [
+        {
+          "quote": "Ф-4. Клиент может приостановить автоплатёж и возобновить его в мобильном банке.",
+          "line_start": 41,
+          "line_end": 41,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-010",
+      "scope": "R-09",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не определено действие системы после трех неудачных попыток (отмена автоплатежа, уведомление клиента, переход в статус 'ошибка').",
+      "recommendation": "Описать финальное состояние автоплатежа после исчерпания лимита попыток.",
+      "question": "Что происходит с автоплатежом после 3-й неудачной попытки?",
+      "evidence": [
+        {
+          "quote": "Ф-5. При неуспешном списании система повторяет попытку три раза с интервалом в сутки.",
+          "line_start": 42,
+          "line_end": 42,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-011",
+      "scope": "R-10",
+      "criterion": "COR",
+      "severity": "major",
+      "problem": "Требование Ф-6 подразумевает выбор дня списания клиентом, однако Ф-2 жестко фиксирует дату списания (1-е число). Это создает логическое противоречие.",
+      "recommendation": "Уточнить, может ли клиент выбирать день списания, и если нет — исключить упоминание выбора дня из Ф-6.",
+      "question": "Может ли клиент выбирать день списания или дата всегда фиксирована (1-е число)?",
+      "evidence": [
+        {
+          "quote": "Ф-6. Клиент выбирает номер, сумму, день и карту, подтверждает подключение и получает SMS с подтверждением.",
+          "line_start": 43,
+          "line_end": 43,
+          "exact": true
+        },
+        {
+          "quote": "Ф-2. Списание выполняется 1-го числа каждого месяца.",
+          "line_start": 39,
+          "line_end": 39,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-012",
+      "scope": "R-12",
+      "criterion": "UNA",
+      "severity": "minor",
+      "problem": "Использование субъективных оценочных суждений («быстро», «надёжно») без количественных метрик (SLA, время отклика, процент успешных транзакций).",
+      "recommendation": "Заменить на измеримые показатели, например: 'Время обработки транзакции не более 2 секунд', 'Доступность сервиса 99.9%'.",
+      "question": "Каковы целевые показатели времени отклика и надежности?",
+      "evidence": [
+        {
+          "quote": "Списание выполняется быстро и надёжно.",
+          "line_start": 50,
+          "line_end": 50,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Использование субъективных оценочных суждений.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-013",
+      "scope": "R-13",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Термин «высокая нагрузка» не определен количественно, что делает требование субъективным и невозможным для тестирования.",
+      "recommendation": "Указать конкретные метрики (например, RPS или количество транзакций в час) для пиковой нагрузки.",
+      "question": "Какое количество транзакций в секунду (RPS) считается целевым для первого дня месяца?",
+      "evidence": [
+        {
+          "quote": "Сервис должен выдерживать высокую нагрузку в первый день месяца.",
+          "line_start": 50,
+          "line_end": 50,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-014",
+      "scope": "R-14",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Отсутствуют требования к глубине хранения истории (срок жизни данных) и доступности данных для клиента/системы.",
+      "recommendation": "Добавить требование о сроке хранения (например, 3 года) и возможности получения истории через API.",
+      "question": "Какой срок хранения истории списаний установлен политикой банка?",
+      "evidence": [
+        {
+          "quote": "Хранится история списаний.",
+          "line_start": 53,
+          "line_end": 53,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-015",
+      "scope": "R-16",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствует измеримый критерий синхронности (например, таймаут ожидания ответа).",
+      "recommendation": "Указать максимальное время ожидания ответа от шлюза.",
+      "question": "Каков допустимый таймаут для синхронного ответа?",
+      "evidence": [
+        {
+          "quote": "Платёжный шлюз возвращает результат списания синхронно.",
+          "line_start": 56,
+          "line_end": 56,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-016",
+      "scope": "R-17",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Не описано поведение системы, если подтверждение не получено в течение 5 минут (таймаут, статус операции, повторная попытка).",
+      "recommendation": "Добавить описание обработки таймаута интеграции с оператором.",
+      "question": "Что должна делать система, если оператор не ответил в течение 5 минут?",
+      "evidence": [
+        {
+          "quote": "Оператор связи подтверждает зачисление в течение 5 минут.",
+          "line_start": 56,
+          "line_end": 56,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-017",
+      "scope": "R-18",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не определен механизм проверки сессии (заголовок, токен, куки) и действие при ошибке проверки (какой код ответа возвращать).",
+      "recommendation": "Уточнить, какой заголовок или токен используется для авторизации, и указать, что при невалидной сессии возвращается 401.",
+      "question": "Какой механизм авторизации используется для данного метода?",
+      "evidence": [
+        {
+          "quote": "1. Проверить пользовательскую сессию.",
+          "line_start": 114,
+          "line_end": 114,
+          "exact": true
+        },
+        {
+          "quote": "2. Проверить, что карта принадлежит клиенту.",
+          "line_start": 115,
+          "line_end": 115,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-18",
+        "R-19"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-018",
+      "scope": "R-19",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не определен механизм проверки принадлежности карты (какой API или сервис вызывает метод, как передается контекст пользователя).",
+      "recommendation": "Указать конкретный сервис или метод проверки прав доступа к карте.",
+      "question": "Каким образом сервис регулярных платежей верифицирует владение картой?",
+      "evidence": [
+        {
+          "quote": "2. Проверить, что карта принадлежит клиенту.",
+          "line_start": 115,
+          "line_end": 115,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-019",
+      "scope": "R-19",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Отсутствует описание поведения системы при ошибке проверки (какой код ответа возвращать, если карта не принадлежит клиенту).",
+      "recommendation": "Добавить описание сценария ошибки (например, возврат 403 Forbidden).",
+      "question": "Какой HTTP-статус должен возвращаться при ошибке проверки принадлежности карты?",
+      "evidence": [
+        {
+          "quote": "2. Проверить, что карта принадлежит клиенту.",
+          "line_start": 115,
+          "line_end": 115,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-020",
+      "scope": "R-19",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствует критерий успешности проверки, что делает невозможным написание тест-кейса.",
+      "recommendation": "Описать ожидаемый результат проверки.",
+      "question": "Что является подтверждением принадлежности карты?",
+      "evidence": [
+        {
+          "quote": "2. Проверить, что карта принадлежит клиенту.",
+          "line_start": 115,
+          "line_end": 115,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-021",
+      "scope": "R-20",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не определены правила валидации (например, для номера телефона — формат, для суммы — соответствие Ф-1, для дня — корректность даты).",
+      "recommendation": "Указать ссылки на правила валидации для каждого параметра.",
+      "question": "Какие именно правила валидации применяются к каждому из полей?",
+      "evidence": [
+        {
+          "quote": "3. Проверить номер, сумму и день списания.",
+          "line_start": 116,
+          "line_end": 116,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-022",
+      "scope": "R-20",
+      "criterion": "SNG",
+      "severity": "minor",
+      "problem": "Требование объединяет три независимые проверки, для каждой из которых могут быть разные условия и коды ошибок.",
+      "recommendation": "Разбить на три отдельных требования с указанием правил валидации для каждого параметра.",
+      "question": "Какие конкретно правила валидации для каждого поля?",
+      "evidence": [
+        {
+          "quote": "3. Проверить номер, сумму и день списания.",
+          "line_start": 116,
+          "line_end": 116,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Объединение нескольких проверок в одну (стилистическое замечание).",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-023",
+      "scope": "R-21",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Противоречие: в логике указан код 400, а в разделе статусов и примере ответа — 409.",
+      "recommendation": "Исправить код ошибки в пункте 4 на 409.",
+      "question": "Какой код статуса является верным для случая дублирования автоплатежа?",
+      "evidence": [
+        {
+          "quote": "4. Если на номер уже есть активный автоплатёж — вернуть 400.",
+          "line_start": 117,
+          "line_end": 117,
+          "exact": true
+        },
+        {
+          "quote": "409. Автоплатёж на этот номер уже существует.",
+          "line_start": 143,
+          "line_end": 143,
+          "exact": false
+        },
+        {
+          "quote": "409. Conflict",
+          "line_start": 150,
+          "line_end": 150,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-21",
+        "R-30",
+        "R-32"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-024",
+      "scope": "R-22",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Не определен алгоритм расчета даты ближайшего списания (nextDate) в зависимости от текущей даты и выбранного дня списания.",
+      "recommendation": "Описать логику расчета nextDate.",
+      "question": "Как рассчитывается дата ближайшего списания, если текущая дата больше или меньше выбранного дня?",
+      "evidence": [
+        {
+          "quote": "5. Создать автоплатёж и вернуть его идентификатор и дату ближайшего списания.",
+          "line_start": 118,
+          "line_end": 118,
+          "exact": true
+        }
+      ],
+      "related": [
+        "R-22"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-025",
+      "scope": "R-22",
+      "criterion": "VER",
+      "severity": "major",
+      "problem": "Отсутствует описание формата даты (nextDate) в логике метода, что делает невозможным однозначную проверку ответа API.",
+      "recommendation": "Уточнить формат даты (например, ISO 8601 YYYY-MM-DD) в соответствии с примером в п. 147.",
+      "question": "Какой формат даты должен возвращать сервис?",
+      "evidence": [
+        {
+          "quote": "5. Создать автоплатёж и вернуть его идентификатор и дату ближайшего списания.",
+          "line_start": 118,
+          "line_end": 118,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-026",
+      "scope": "R-23",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Противоречие: в описании указано '10 цифр', но в примере (строка 106) передан номер '7011234567', который является 10-значным, однако в разделе 30 указана маска '+7 XXX XXX XX XX', подразумевающая 11 цифр с кодом страны.",
+      "recommendation": "Привести описание параметра в соответствие с бизнес-требованиями и примером.",
+      "question": "Какая длина номера является корректной: 10 или 11 цифр?",
+      "evidence": [
+        {
+          "quote": "10 цифр без кода страны",
+          "line_start": 126,
+          "line_end": 126,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-027",
+      "scope": "R-23",
+      "criterion": "UNA",
+      "severity": "major",
+      "problem": "Неоднозначность: не указано, должен ли номер начинаться с '7' или '8', или это должны быть только цифры абонентского номера.",
+      "recommendation": "Уточнить формат (например, '10 цифр, начинающиеся с 7').",
+      "question": "Какой именно формат номера телефона ожидается?",
+      "evidence": [
+        {
+          "quote": "10 цифр без кода страны",
+          "line_start": 126,
+          "line_end": 126,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-028",
+      "scope": "R-28",
+      "criterion": "UNA",
+      "severity": "critical",
+      "problem": "Противоречие формата даты в описании параметра (DD.MM.YYYY) и примере ответа (YYYY-MM-DD).",
+      "recommendation": "Привести формат даты к единому стандарту (рекомендуется ISO 8601: YYYY-MM-DD) во всех частях документа.",
+      "question": "Какой формат даты является целевым для API?",
+      "evidence": [
+        {
+          "quote": "nextDate | string | DD.MM.YYYY | Дата ближайшего списания | next_date",
+          "line_start": 136,
+          "line_end": 136,
+          "exact": false
+        },
+        {
+          "quote": "{\"autopayId\":\"ap-77\",\"nextDate\":\"2026-12-01\"}",
+          "line_start": 147,
+          "line_end": 147,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-28"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-029",
+      "scope": "R-30",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Отсутствует описание структуры тела ответа при ошибке 400. Неясно, какие именно параметры некорректны и в каком формате возвращается ошибка.",
+      "recommendation": "Добавить пример JSON-ответа для статуса 400 с описанием полей ошибки.",
+      "question": "Какая структура тела ответа должна быть при ошибке валидации?",
+      "evidence": [
+        {
+          "quote": "400. Некорректные параметры.",
+          "line_start": 141,
+          "line_end": 141,
+          "exact": false
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-030",
+      "scope": "R-31",
+      "criterion": "COR",
+      "severity": "critical",
+      "problem": "Требование R-31 (статус 401) противоречит параметру Authorization (строка 102), где указано, что авторизация не требуется. Это делает статус 401 недостижимым в рамках описанного API.",
+      "recommendation": "Удалить статус 401 из документа или изменить требование к авторизации на обязательную.",
+      "question": "Требуется ли авторизация для данного метода?",
+      "evidence": [
+        {
+          "quote": "Authorization | Не требуется",
+          "line_start": 102,
+          "line_end": 102,
+          "exact": false
+        },
+        {
+          "quote": "401. Нет авторизации.",
+          "line_start": 142,
+          "line_end": 142,
+          "exact": false
+        }
+      ],
+      "related": [],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-031",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "severity": "critical",
+      "problem": "Критерий приёмки AC-2 разрешает создание автоплатежа с суммой, превышающей лимит, установленный в Ф-1.",
+      "recommendation": "Привести критерий приёмки в соответствие с бизнес-требованием или изменить лимит.",
+      "question": "Какое значение лимита является верным?",
+      "evidence": [
+        {
+          "quote": "Ф-1. Клиент подключает автоплатёж с любой своей карты на номер оператора Казахстана. Сумма — целое число от 100 до 50 000 ₸ включительно.",
+          "line_start": 38,
+          "line_end": 38,
+          "exact": false
+        },
+        {
+          "quote": "Клиент вводит сумму 60 000 ₸ | Нажимает «Сохранить» | Автоплатёж создан",
+          "line_start": 68,
+          "line_end": 68,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-05"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-032",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "severity": "critical",
+      "problem": "Ф-2 жестко фиксирует дату списания (1-е число), тогда как AC-1 предполагает возможность выбора и исполнения списания 15-го числа.",
+      "recommendation": "Привести Ф-2 в соответствие с возможностью выбора дня списания, описанной в R-03 и AC-1.",
+      "question": "Является ли 1-е число единственно возможной датой списания?",
+      "evidence": [
+        {
+          "quote": "Ф-2. Списание выполняется 1-го числа каждого месяца.",
+          "line_start": 39,
+          "line_end": 39,
+          "exact": true
+        },
+        {
+          "quote": "Автоплатёж 2 000 ₸, день списания 15, на карте 10 000 ₸ | Наступает 15-е число | Списано 2 000 ₸, клиент получил SMS",
+          "line_start": 67,
+          "line_end": 67,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-06"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-033",
+      "scope": "SET",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Отсутствуют данные о согласующих лицах (ФИО, подписи) в блоке согласующих, что нарушает требования к оформлению банковской документации.",
+      "recommendation": "Заполнить блок согласующих реальными данными ответственных лиц.",
+      "question": "Кто является ответственным за согласование данного документа?",
+      "evidence": [
+        {
+          "quote": "Business owner / Product owner / Аналитик | Розничный бизнес / Платежи / Аналитик платежей",
+          "line_start": 18,
+          "line_end": 18,
+          "exact": false
+        },
+        {
+          "quote": "Подразделение | ФИО ответственного | Подпись",
+          "line_start": 86,
+          "line_end": 86,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-01"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-034",
+      "scope": "SET",
+      "criterion": "CMP",
+      "severity": "major",
+      "problem": "Отсутствует атрибут связи с исходной операцией (ID транзакции) для реализации логики возвратов, сторно или отмены, что делает невозможным выполнение обратных операций.",
+      "recommendation": "Добавить в модель данных атрибут для хранения связи с исходной операцией (например, transaction_id).",
+      "question": "Как система будет идентифицировать конкретную операцию для проведения возврата или сторно без связи с исходным ID?",
+      "evidence": [
+        {
+          "quote": "Хранится история списаний. Для каждого автоплатежа хранятся номер, сумма, день списания, карта и статус.",
+          "line_start": 53,
+          "line_end": 53,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-15"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-035",
+      "scope": "SET",
+      "criterion": "S-TRC",
+      "severity": "major",
+      "problem": "Критерий приёмки требует нажать «Сохранить». В описании экрана указана кнопка «Подключить». Уточните, какой элемент выполняет действие.",
+      "recommendation": "Согласовать подпись элемента или указать переход на другой экран.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| Клиент вводит сумму 60 000 ₸ | Нажимает «Сохранить» | Автоплатёж создан |",
+          "line_start": 68,
+          "line_end": 68,
+          "exact": true
+        },
+        {
+          "quote": "Платежи → Мобильная связь → Автоплатёж. На экране поля «Номер телефона» (маска +7 XXX XXX XX XX), «Сумма, ₸», «День списания», выбор карты и кнопка «Подключить».",
+          "line_start": 30,
+          "line_end": 30,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: minor → major. Противоречие в наименовании кнопки (Сохранить vs Подключить).",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-036",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "В разделе ревью требований заявлено требование о наличии схемы отката или скрытия функционала, однако само содержимое схемы в документе отсутствует.",
+      "recommendation": "Добавить описание стратегии отката (rollback) или механизма скрытия функционала (feature toggle) для обеспечения безопасности при сбоях.",
+      "question": "Каким образом команда должна реализовать откат или скрытие функционала, если описание отсутствует?",
+      "evidence": [
+        {
+          "quote": "Реализация задачи предусматривает схему отката или скрытия функционала | Да / Нет | Да / Нет",
+          "line_start": 79,
+          "line_end": 79,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-01",
+        "R-04"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-037",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Поле «Request URL» не заполнено (заглушка/прочерк): «**Request URL** | Dev: `/autopay/create` . Prod: —».",
+      "recommendation": "Заполнить раздел или явно указать «не применимо» с обоснованием.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| **Request URL** | Dev: `/autopay/create` . Prod: — |",
+          "line_start": 105,
+          "line_end": 105,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-038",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "severity": "major",
+      "problem": "Отсутствует ссылка на Swagger или описание структуры тела ответа при ошибках (400, 401), что делает невозможным корректную обработку ошибок на стороне клиента.",
+      "recommendation": "Заполнить поле Swagger или предоставить детальную спецификацию структуры JSON-ответов для всех кодов ошибок.",
+      "question": "Какова структура тела ответа при получении ошибки 400 или 401?",
+      "evidence": [
+        {
+          "quote": "Swagger | —",
+          "line_start": 107,
+          "line_end": 107,
+          "exact": false
+        }
+      ],
+      "related": [
+        "R-30"
+      ],
+      "source": "llm",
+      "reviewer_note": "",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-039",
+      "scope": "SET",
+      "criterion": "S-MOD",
+      "severity": "minor",
+      "problem": "В документе не указаны номер версии и дата.",
+      "recommendation": "Добавить версию, дату и историю изменений документа.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "# Автоплатёж за мобильную связь",
+          "line_start": 1,
+          "line_end": 1,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Отсутствуют номер версии и дата документа.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-040",
+      "scope": "SET",
+      "criterion": "DOC",
+      "severity": "minor",
+      "problem": "Чек-лист ревью не заполнен: 7 пунктов с вариантами «Да / Нет» без выбранного значения (строки 76–82).",
+      "recommendation": "Пройти чек-лист ревью и проставить отметки до передачи в разработку.",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| Техническое требование зафиксировано и покрывает бизнес-требование | Да / Нет | Да / Нет | |",
+          "line_start": 76,
+          "line_end": 76,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Чек-лист ревью не заполнен.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    },
+    {
+      "id": "F-041",
+      "scope": "SET",
+      "criterion": "DOC",
+      "severity": "minor",
+      "problem": "Пустая строка таблицы: данные не внесены.",
+      "recommendation": "Заполнить таблицу (например, ответственных и согласующих).",
+      "question": "",
+      "evidence": [
+        {
+          "quote": "| | | |",
+          "line_start": 88,
+          "line_end": 88,
+          "exact": true
+        }
+      ],
+      "related": [],
+      "source": "rule",
+      "reviewer_note": "Серьёзность изменена вторым ревьюером: major → minor. Пустая строка в таблице.",
+      "analyst_decision": "pending",
+      "analyst_note": ""
+    }
+  ],
+  "dropped": [
+    {
+      "id": "raw-22",
+      "scope": "R-24",
+      "criterion": "COR",
+      "reason": "цитата не найдена в документе",
+      "problem": "Противоречие между бизнес-требованием Ф-1 (до 50 000) и описанием параметра (до 5 000 000)."
+    },
+    {
+      "id": "raw-29",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "цитата не найдена в документе",
+      "problem": "Противоречие формата даты в описании параметра и примере ответа."
+    },
+    {
+      "id": "raw-36",
+      "scope": "SET",
+      "criterion": "CMP",
+      "reason": "цитата не найдена в документе",
+      "problem": "Отсутствуют требования к глубине хранения истории списаний (срок жизни данных) и доступности этих данных для клиента."
+    },
+    {
+      "id": "raw-59",
+      "scope": "R-24",
+      "criterion": "COR",
+      "reason": "цитата не найдена в документе",
+      "problem": "Противоречие: бизнес-требование Ф-1 ограничивает сумму до 50 000 ₸, а описание параметра API разрешает до 5 000 000 ₸."
+    },
+    {
+      "id": "raw-60",
+      "scope": "R-25",
+      "criterion": "CMP",
+      "reason": "цитата не найдена в документе",
+      "problem": "Отсутствует обработка граничных случаев: не указано, что делать, если в месяце меньше 31 дня (например, 30-е число или февраль)."
+    },
+    {
+      "id": "F-006",
+      "scope": "R-04",
+      "criterion": "CMP",
+      "reason": "объединена с F-005. Дубликат F-005.",
+      "problem": "Отсутствует описание сценария при неудачном списании (недостаток средств), что противоречит Ф-3 и Ф-5."
+    },
+    {
+      "id": "F-007",
+      "scope": "R-05",
+      "criterion": "COR",
+      "reason": "объединена с F-002. Дубликат F-002.",
+      "problem": "Противоречие между функциональным требованием (50 000) и описанием параметра в API (5 000 000)."
+    },
+    {
+      "id": "F-008",
+      "scope": "R-05",
+      "criterion": "COR",
+      "reason": "объединена с F-002. Дубликат F-002.",
+      "problem": "Противоречие между функциональным требованием (лимит 50 000) и описанием API (лимит 5 000 000). Разработчик не сможет определить корректный лимит для валидации."
+    },
+    {
+      "id": "F-011",
+      "scope": "R-07",
+      "criterion": "COR",
+      "reason": "объединена с F-005. Дубликат F-005.",
+      "problem": "Прямое логическое противоречие между Ф-3 и Ф-5 в части обработки неуспешного списания (отсутствие попыток против трех повторных попыток)."
+    },
+    {
+      "id": "F-014",
+      "scope": "R-08",
+      "criterion": "UNA",
+      "reason": "объединена с F-009. Дубликат F-009.",
+      "problem": "Отсутствуют методы API для приостановки и возобновления автоплатежа. Требование не содержит критериев реализации (какие методы, какие статусы)."
+    },
+    {
+      "id": "F-020",
+      "scope": "R-14",
+      "criterion": "CMP",
+      "reason": "объединена с F-014. Дубликат F-014.",
+      "problem": "Отсутствует требование к сроку хранения истории (Retention Policy), что критично для банковских систем и комплаенса."
+    },
+    {
+      "id": "F-021",
+      "scope": "R-15",
+      "criterion": "COR",
+      "reason": "объединена с F-002. Дубликат F-002.",
+      "problem": "Противоречие между функциональным требованием Ф-1 (лимит 50 000) и описанием параметра amount в API (лимит 5 000 000)."
+    },
+    {
+      "id": "F-025",
+      "scope": "R-18",
+      "criterion": "UNA",
+      "reason": "объединена с F-017. Дубликат F-017.",
+      "problem": "Не определено, что именно проверяется (валидность токена, наличие сессии) и что делать при ошибке."
+    },
+    {
+      "id": "F-029",
+      "scope": "R-19",
+      "criterion": "UNA",
+      "reason": "объединена с F-019. Дубликат F-019.",
+      "problem": "Не определен код ответа при ошибке проверки принадлежности карты."
+    },
+    {
+      "id": "F-032",
+      "scope": "R-20",
+      "criterion": "SNG",
+      "reason": "объединена с F-022. Дубликат F-022.",
+      "problem": "Требование объединяет три независимые проверки в одну."
+    },
+    {
+      "id": "F-039",
+      "scope": "R-28",
+      "criterion": "COR",
+      "reason": "объединена с F-028. Дубликат F-028.",
+      "problem": "Противоречие между форматом даты в таблице параметров (DD.MM.YYYY) и примером ответа в JSON (YYYY-MM-DD). Это критично для реализации парсинга на стороне клиента."
+    },
+    {
+      "id": "F-040",
+      "scope": "R-30",
+      "criterion": "COR",
+      "reason": "объединена с F-023. Дубликат F-023.",
+      "problem": "Противоречие логики метода: в п. 117 указан код 400 для дубликата, а в п. 143 — код 409."
+    },
+    {
+      "id": "F-043",
+      "scope": "R-31",
+      "criterion": "COR",
+      "reason": "объединена с F-030. Дубликат F-030.",
+      "problem": "Противоречие: в общих параметрах метода (строка 102) указано, что авторизация не требуется, однако в статусах (строка 142) предусмотрен код 401 (Unauthorized)."
+    },
+    {
+      "id": "F-044",
+      "scope": "R-32",
+      "criterion": "COR",
+      "reason": "объединена с F-023. Дубликат F-023.",
+      "problem": "Противоречие между логикой метода (строка 117 требует возвращать 400 при дублировании) и описанием статусов (строка 143 определяет статус 409 для этой же ситуации)."
+    },
+    {
+      "id": "F-045",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "reason": "объединена с F-001. Дубликат F-001.",
+      "problem": "Документ содержит прямое указание на нецелевое использование и обращение к ИИ, что блокирует его статус как официального требования."
+    },
+    {
+      "id": "F-046",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-001. Дубликат F-001.",
+      "problem": "Противоречие между статусом документа (не для разработки) и наличием детальной технической спецификации API для реализации."
+    },
+    {
+      "id": "F-048",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-002. Дубликат F-002.",
+      "problem": "Противоречие в максимально допустимой сумме автоплатежа между бизнес-требованием и API."
+    },
+    {
+      "id": "F-050",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-005. Дубликат F-005.",
+      "problem": "Прямое противоречие в логике обработки неуспешного списания: Ф-3 запрещает повторные попытки, а Ф-5 требует их выполнения."
+    },
+    {
+      "id": "F-051",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-005. Дубликат F-005.",
+      "problem": "Прямое противоречие в логике обработки неуспешного списания: Ф-3 запрещает повторные попытки, а Ф-5 требует их выполнения."
+    },
+    {
+      "id": "F-052",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-031. Дубликат F-031.",
+      "problem": "Критерий приёмки AC-2 описывает успешное создание автоплатежа на сумму 60 000 ₸, что нарушает ограничение Ф-1 (максимум 50 000 ₸)."
+    },
+    {
+      "id": "F-053",
+      "scope": "SET",
+      "criterion": "S-CON",
+      "reason": "объединена с F-023. Дубликат F-023.",
+      "problem": "Противоречие в коде ответа API при попытке создания дублирующего автоплатежа."
+    },
+    {
+      "id": "F-055",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "reason": "объединена с F-001. Дубликат F-001.",
+      "problem": "Документ содержит прямое указание на непригодность для разработки, что блокирует работу команды."
+    },
+    {
+      "id": "F-060",
+      "scope": "SET",
+      "criterion": "S-CMP",
+      "reason": "объединена с F-036. Дубликат F-036.",
+      "problem": "В документе отсутствует описание схемы отката или скрытия функционала (feature toggle), наличие которой требуется в чек-листе ревью (строка 79)."
+    },
+    {
+      "id": "F-065",
+      "scope": "SET",
+      "criterion": "CMP",
+      "reason": "объединена с F-017. Дубликат F-017.",
+      "problem": "Не определен механизм проверки сессии (токен, куки) и механизм проверки принадлежности карты (какой сервис вызывает метод, как передается контекст пользователя)."
+    },
+    {
+      "id": "F-066",
+      "scope": "SET",
+      "criterion": "S-MOD",
+      "reason": "объединена с F-007. Дубликат F-007.",
+      "problem": "Дублирование и противоречие логики: Ф-2 жестко фиксирует 1-е число, тогда как параметр API `day` позволяет выбирать любой день месяца."
+    }
+  ],
+  "set_verdicts": {
+    "S-CMP": {
+      "status": "fail",
+      "comment": "Набор требований неполный: отсутствуют сценарии обработки ошибок, граничные значения дат и механизмы приостановки/возобновления."
+    },
+    "S-CON": {
+      "status": "fail",
+      "comment": "Множественные противоречия между бизнес-требованиями, логикой API и критериями приёмки (коды ответов, лимиты сумм, форматы дат)."
+    },
+    "S-FEA": {
+      "status": "fail",
+      "comment": "Требования к производительности и нагрузке не имеют количественных метрик, что делает их нереализуемыми для тестирования."
+    },
+    "S-COM": {
+      "status": "fail",
+      "comment": "Использование субъективных оценочных суждений («быстро», «надёжно») и отсутствие количественных метрик делает требования непонятными для разработки."
+    },
+    "S-VAL": {
+      "status": "fail",
+      "comment": "Критерии приёмки AC-2 противоречат бизнес-требованию Ф-1 по лимиту суммы, что делает валидацию невозможной."
+    },
+    "S-RNK": {
+      "status": "fail",
+      "comment": "В документе отсутствует ранжирование требований по важности или стабильности."
+    },
+    "S-MOD": {
+      "status": "fail",
+      "comment": "Отсутствует версия документа и история изменений, что затрудняет модифицируемость."
+    },
+    "S-TRC": {
+      "status": "fail",
+      "comment": "Цепочка от бизнес-целей до критериев приёмки нарушена из-за противоречий в логике и данных."
+    }
+  },
+  "dev_ready": "no",
+  "test_ready": "no",
+  "verdict_text": "Документ содержит критические противоречия в бизнес-логике (лимиты, даты, обработка ошибок) и прямое указание на нецелевое использование, что делает его непригодным для разработки. Множественные расхождения между функциональными требованиями и описанием API (F-002, F-005, F-023, F-026, F-028, F-030, F-031) блокируют проектирование тестов и реализацию. Документ требует полной переработки и согласования.",
+  "priority_fixes": [
+    {
+      "action": "Устранить отказ от ответственности и привести документ в статус официального требования.",
+      "finding_ids": [
+        "F-001"
+      ]
+    },
+    {
+      "action": "Устранить противоречия в бизнес-логике (лимиты, даты, повторные попытки).",
+      "finding_ids": [
+        "F-002",
+        "F-005",
+        "F-031",
+        "F-032"
+      ]
+    },
+    {
+      "action": "Привести API в соответствие с бизнес-требованиями (коды ответов, форматы данных).",
+      "finding_ids": [
+        "F-023",
+        "F-026",
+        "F-028",
+        "F-030"
+      ]
+    },
+    {
+      "action": "Заполнить пропущенные технические параметры и описания методов.",
+      "finding_ids": [
+        "F-009",
+        "F-017",
+        "F-037",
+        "F-038"
+      ]
+    },
+    {
+      "action": "Устранить противоречия в UI и критериях приемки.",
+      "finding_ids": [
+        "F-011",
+        "F-035"
+      ]
+    }
+  ],
+  "llm_calls": 22,
+  "cache_hits": 0,
+  "agent_version": "v1.3.1 (git 209c90d)",
+  "stage_durations": {
+    "rules": 0.0038008689880371094,
+    "segmentation": 8.769329071044922,
+    "review_pass_1": 272.16706132888794,
+    "review_pass_2": 260.9269690513611,
+    "critic": 11.39089560508728
+  },
+  "models_used": [
+    "gemini-3.1-flash-lite"
+  ],
+  "coverage_gaps": [],
+  "retries": 3,
+  "request_log": [
+    {
+      "step": "нарезка",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 8.746
+    },
+    {
+      "step": "проверка R-01…R-06",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 5.807
+    },
+    {
+      "step": "проверка R-07…R-12",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 27.414
+    },
+    {
+      "step": "проверка R-13…R-18",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 4.183
+    },
+    {
+      "step": "проверка R-19…R-24",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 6.488
+    },
+    {
+      "step": "проверка R-25…R-30",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 3.654
+    },
+    {
+      "step": "проверка R-31…R-32",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 134.493
+    },
+    {
+      "step": "проверка набора",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 12.55
+    },
+    {
+      "step": "поиск противоречий",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 4.602
+    },
+    {
+      "step": "поиск пропущенных сценариев",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 24.315
+    },
+    {
+      "step": "поиск пропущенных сценариев",
+      "model": "gemini-3.1-flash-lite",
+      "retry": true,
+      "duration_s": 3.688
+    },
+    {
+      "step": "проверка R-01…R-03 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 3.402
+    },
+    {
+      "step": "проверка R-04…R-09 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 5.026
+    },
+    {
+      "step": "проверка R-10…R-15 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 93.449
+    },
+    {
+      "step": "проверка R-16…R-21 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 5.017
+    },
+    {
+      "step": "проверка R-22…R-27 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 5.28
+    },
+    {
+      "step": "проверка R-28…R-32 (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 6.513
+    },
+    {
+      "step": "проверка набора (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 6.601
+    },
+    {
+      "step": "поиск противоречий (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 2.918
+    },
+    {
+      "step": "поиск противоречий (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": true,
+      "duration_s": 7.477
+    },
+    {
+      "step": "поиск пропущенных сценариев (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 49.725
+    },
+    {
+      "step": "поиск пропущенных сценариев (перепроверка)",
+      "model": "gemini-3.1-flash-lite",
+      "retry": true,
+      "duration_s": 4.419
+    },
+    {
+      "step": "второй ревьюер",
+      "model": "gemini-3.1-flash-lite",
+      "retry": false,
+      "duration_s": 8.427
+    }
+  ],
+  "document": {
+    "name": "autopay.md",
+    "title": "Автоплатёж за мобильную связь",
+    "sha256": "a0a7046bb2bed7c3d0a68b32540d2a4ac43c84397b13876f9d546fcc837cacf8",
+    "lines": 153
+  }
+}
