@@ -50,3 +50,10 @@ jobs:
             reports/report-brief.md
             reports/metrics-case.md
             reports/review.html
+      - name: Prepare isolated reviewer packet
+        run: python -m eval.promotion packet reports/promotion-candidate.json independent-review.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: independent-review
+          path: independent-review.zip
+          if-no-files-found: error
