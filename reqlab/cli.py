@@ -14,7 +14,7 @@ from . import __version__
 from .llm import LLMError, from_env
 from .loader import LoadError, load
 from .pipeline import Agent
-from .report import render, render_brief
+from .report import READY_RU, render, render_brief
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -145,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         brief_path.write_text(render_brief(result), encoding="utf-8")
         print(f"Кратко: {brief_path}")
     print(f"Требований: {len(result.requirements)}, нарушений: {len(result.findings)}, "
-          f"разработку начинать: {result.dev_ready}")
+          f"разработку начинать: {READY_RU.get(result.dev_ready, result.dev_ready).lower()}")
     return 0
 
 
