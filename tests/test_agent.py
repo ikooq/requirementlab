@@ -149,6 +149,35 @@ def test_all_daily_quotas_exhausted_fails_fast(monkeypatch):
     assert calls["n"] == 2  # по одному запросу на модель, без повторов на исчерпанной
 
 
+def test_daily_quota_switches_key_before_model(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM(["k1", "k2", "k3"], "flash", fallbacks=["lite"], verbose=False)
+    used = []
+
+    def fake_post(url, headers, body):
+        key = headers["x-goog-api-key"]
+        used.append((key, url.rsplit("/", 1)[-1].split(":")[0]))
+        if key != "k3":
+            raise llm_mod._Retryable("HTTP 429", None, 429, daily_quota=True)
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 3}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 3}
+    assert used == [("k1", "flash"), ("k2", "flash"), ("k3", "flash")]
+    assert g.label == "gemini / flash"  # модель не сменилась, только ключ
+
+
+def test_gemini_keys_from_env(monkeypatch):
+    from reqlab.llm import gemini_keys_from_env
+
+    monkeypatch.setenv("GEMINI_API_KEY", "a, b")
+    monkeypatch.setenv("GEMINI_API_KEY_2", "c")
+    monkeypatch.setenv("GEMINI_API_KEY_3", "a")
+    assert gemini_keys_from_env() == ["a", "b", "c"]
+
+
 def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
     from reqlab import llm as llm_mod
 
@@ -213,17 +242,16 @@ def test_version_placeholder_reported_once(tmp_path):
     assert [h.rule for h in hits if h.line_start == 3] == ["no-version"]
 
 
-def test_rule_placeholder_skipped_when_llm_covers_line(spec):
-    from reqlab.pipeline import Evidence, Finding
+def test_rule_placeholder_dropped_only_when_llm_finding_survives():
+    from reqlab.pipeline import Evidence, Finding, _drop_covered_placeholders
 
-    doc = load(spec)
     hits = [rules.RuleHit("placeholder", "S-CMP", "major", 4, 4, "q", "p", "r")]
-    llm = [Finding(id="", scope="R-01", criterion="CMP", severity="major", problem="p",
-                   recommendation="", question="", evidence=[Evidence("q", 4, 4, True)])]
-    agent = Agent(FakeLLM(), verbose=False)
-    assert agent._rule_findings(hits, llm) == []
-    assert len(agent._rule_findings(hits, [])) == 1
-    assert doc  # документ загружается
+    rule = Agent(FakeLLM(), verbose=False)._rule_findings(hits)
+    llm = Finding(id="", scope="R-01", criterion="CMP", severity="major", problem="p",
+                  recommendation="", question="", evidence=[Evidence("q", 4, 4, True)])
+    assert _drop_covered_placeholders(rule + [llm]) == [llm]
+    # второй ревьюер отклонил находку модели — правило остаётся
+    assert _drop_covered_placeholders(rule) == rule
 
 
 def test_parse_json_handles_fences():

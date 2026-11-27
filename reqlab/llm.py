@@ -82,7 +82,9 @@ class LLM:
         self.calls = 0          # реальные обращения к API
         self.cache_hits = 0
         self.models_used: list[str] = []
-        self._exhausted: set[str] = set()  # модели с исчерпанной дневной квотой
+        # (номер ключа, модель) с исчерпанной дневной квотой
+        self._exhausted: set[tuple[int, str]] = set()
+        self._key_idx = 0
         self._last = 0.0
 
     @property
@@ -90,8 +92,11 @@ class LLM:
         used = self.models_used or [self.model]
         return f"{self.provider} / {', '.join(used)}"
 
-    def _rotate(self, reason: str) -> bool:
-        """Переключиться на запасную модель. По умолчанию запасных нет."""
+    def _mark_exhausted(self) -> None:
+        self._exhausted.add((self._key_idx, self.model))
+
+    def _rotate(self, reason: str, daily: bool = False) -> bool:
+        """Переключиться на другой ключ или запасную модель. По умолчанию их нет."""
         return False
 
     def complete_json(self, system: str, user: str, *, step: str = "") -> dict:
@@ -129,9 +134,9 @@ class LLM:
                 # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
                 # Дневная квота не восстановится за минуты — переключаемся сразу.
                 if e.daily_quota:
-                    self._exhausted.add(self.model)
+                    self._mark_exhausted()
                 if ((fails_on_model >= 2 or e.daily_quota) and e.model_unavailable
-                        and self._rotate(last_err)):
+                        and self._rotate(last_err, daily=e.daily_quota)):
                     fails_on_model = 0
                     attempt = 0
                     time.sleep(2)
@@ -220,26 +225,47 @@ class GeminiLLM(LLM):
     provider = "gemini"
     BASE = "https://generativelanguage.googleapis.com/v1beta"
 
-    def __init__(self, api_key: str, model: str = GEMINI_DEFAULT_MODEL,
+    def __init__(self, api_key: str | list[str], model: str = GEMINI_DEFAULT_MODEL,
                  fallbacks: list[str] | None = None, **kw):
         super().__init__(model, **kw)
-        self.api_key = api_key
+        keys = [api_key] if isinstance(api_key, str) else list(api_key)
+        self.api_keys = [k for k in keys if k] or [""]
         chain = [model] + [m for m in (fallbacks or GEMINI_FALLBACKS) if m != model]
         self._queue = chain[1:]
         self._discovered = False
 
-    def _rotate(self, reason: str) -> bool:
+    @property
+    def api_key(self) -> str:
+        return self.api_keys[self._key_idx]
+
+    def _free_key(self, model: str) -> int | None:
+        """Первый ключ, у которого для модели ещё есть дневная квота."""
+        return next((i for i in range(len(self.api_keys))
+                     if (i, model) not in self._exhausted), None)
+
+    def _rotate(self, reason: str, daily: bool = False) -> bool:
+        # Дневная квота кончилась на этом ключе: сначала другой ключ с той же моделью —
+        # качество отчёта не падает. Квота считается на проект Google, поэтому ключи
+        # должны быть из разных проектов.
+        if daily and len(self.api_keys) > 1:
+            k = self._free_key(self.model)
+            if k is not None:
+                self._log(f"  ключ №{self._key_idx + 1}: дневная квота {self.model} исчерпана, "
+                          f"переключаюсь на ключ №{k + 1}")
+                self._key_idx = k
+                return True
         if not self._queue and not self._discovered:
             self._discovered = True
             picked = self._pick_model()
             if picked and picked != self.model:
                 self._queue.append(picked)
-        self._queue = [m for m in self._queue if m not in self._exhausted]
+        self._queue = [m for m in self._queue if self._free_key(m) is not None]
         if not self._queue:
             return False
         new = self._queue.pop(0)
         self._log(f"  модель {self.model} недоступна ({reason}), переключаюсь на {new}")
         self.model = new
+        self._key_idx = self._free_key(new)
         return True
 
     def _pick_model(self) -> str | None:
@@ -320,6 +346,18 @@ class OpenAICompatLLM(LLM):
             raise _Retryable("неожиданный формат ответа") from e
 
 
+def gemini_keys_from_env() -> list[str]:
+    """Ключи по порядку: GEMINI_API_KEY (можно несколько через запятую), затем
+    GEMINI_API_KEY_2 … GEMINI_API_KEY_9. Повторы отбрасываются."""
+    raw = os.environ.get("GEMINI_API_KEY", "").split(",")
+    raw += [os.environ.get(f"GEMINI_API_KEY_{i}", "") for i in range(2, 10)]
+    keys: list[str] = []
+    for k in (x.strip() for x in raw):
+        if k and k not in keys:
+            keys.append(k)
+    return keys
+
+
 def from_env(provider: str | None = None, model: str | None = None, *,
              cache_dir: Path | None = None, verbose: bool = True) -> LLM:
     provider = (provider or os.environ.get("LLM_PROVIDER") or "").strip().lower()
@@ -335,11 +373,11 @@ def from_env(provider: str | None = None, model: str | None = None, *,
     interval = float(os.environ.get("LLM_MIN_INTERVAL", "0") or 0)
     common = dict(cache_dir=cache_dir, verbose=verbose)
     if provider == "gemini":
-        key = os.environ.get("GEMINI_API_KEY", "")
-        if not key:
+        keys = gemini_keys_from_env()
+        if not keys:
             raise LLMError("GEMINI_API_KEY не задан в .env")
         fb = [m.strip() for m in os.environ.get("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
-        return GeminiLLM(key, model or os.environ.get("GEMINI_MODEL") or GEMINI_DEFAULT_MODEL,
+        return GeminiLLM(keys, model or os.environ.get("GEMINI_MODEL") or GEMINI_DEFAULT_MODEL,
                          fallbacks=fb or None, min_interval=interval or 13.0, **common)
     if provider in ("openai", "openai-compatible", "groq", "openrouter", "ollama"):
         return OpenAICompatLLM(

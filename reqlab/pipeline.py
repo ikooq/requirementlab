@@ -128,7 +128,9 @@ class Agent:
         raw += self._conflicts(doc, numbered, reqs, acs, raw)
 
         findings, dropped = self._ground(raw, loc)
-        findings += self._rule_findings(hits, findings)
+        findings += self._rule_findings(hits)
+        if not self.verify:
+            findings = _drop_covered_placeholders(findings)
         findings = _dedupe(findings)
         known = {r.id for r in reqs}
         _scrub_refs(findings, known)
@@ -143,6 +145,9 @@ class Agent:
             dev, test, text, fixes, more_dropped = self._critic(doc, numbered, findings)
             dropped += more_dropped
             findings = [f for f in findings if f.id not in {d["id"] for d in more_dropped}]
+            # Дубли правил снимаем только после второго ревьюера: если он отклонил
+            # находку модели, находка правила на той же строке должна остаться.
+            findings = _drop_covered_placeholders(findings)
             old_ids = {id(f): f.id for f in findings}
             _renumber(findings)  # серьёзность могла измениться — пересортировать
             remap = {old_ids[id(f)]: f.id for f in findings}
@@ -307,16 +312,11 @@ class Agent:
                 related=[str(x) for x in (f.get("related") or [])]))
         return findings, dropped
 
-    def _rule_findings(self, hits, llm_findings: list[Finding] = ()) -> list[Finding]:
-        # Строки, о которых уже есть находка модели: правило там не дублируем.
-        covered = {ln for f in llm_findings for e in f.evidence
-                   for ln in range(e.line_start, e.line_end + 1)}
+    def _rule_findings(self, hits) -> list[Finding]:
         out = []
         for h in hits:
             if h.rule == "vague-word":
                 continue  # размытые слова — только подсказка модели, без отдельной находки
-            if h.rule == "placeholder" and h.line_start in covered:
-                continue
             out.append(Finding(id="", scope="SET", criterion=h.criterion, severity=h.severity,
                                problem=h.problem, recommendation=h.recommendation, question="",
                                evidence=[Evidence(h.quote, h.line_start, h.line_end, True)],
@@ -382,6 +382,14 @@ def doc_text(doc: Document, start: int, end: int) -> str:
     """Текст строк документа start..end без markdown-разметки — то, что реально написано."""
     parts = [_MD.sub("", ln).strip(" \t*-#>|") for ln in doc.lines[start - 1:end]]
     return " ".join(p for p in parts if p)
+
+
+def _drop_covered_placeholders(findings: list[Finding]) -> list[Finding]:
+    """Находка правила «заглушка» (S-CMP) не нужна, если модель уже разобрала эту строку."""
+    covered = {ln for f in findings if f.source != "rule" for e in f.evidence
+               for ln in range(e.line_start, e.line_end + 1)}
+    return [f for f in findings if not (f.source == "rule" and f.criterion == "S-CMP"
+                                        and f.evidence[0].line_start in covered)]
 
 
 _REQ_REF = re.compile(r"\bR-\d+\b")
