@@ -59,6 +59,9 @@ def _head(w, res: RunResult, sev: Counter, limit: int, more: str) -> None:
       f"Требований: {len(res.requirements)}, нарушений: {len(res.findings)} "
       f"(критичных {sev['critical']}, существенных {sev['major']}, незначительных {sev['minor']}).")
     w("")
+    if res.coverage_gaps:
+        w("**Проверка неполна.** " + " ".join(res.coverage_gaps))
+        w("")
     top = top_findings(res.findings, limit)
     if top:
         w("**Главное — что исправить до старта разработки:**")
@@ -191,7 +194,10 @@ def render(res: RunResult) -> str:
         w(f"> {_cell(r.quote)}")
         w("")
         if not fs:
-            w("Нарушений не найдено.")
+            if all(v == "unknown" for v in r.verdicts.values()):
+                w("Оценка отсутствует. Требование нужно проверить повторно.")
+            else:
+                w("Нарушений не найдено.")
             w("")
             continue
         for f in fs:

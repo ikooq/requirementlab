@@ -83,6 +83,7 @@ class RunResult:
     agent_version: str
     stage_durations: dict[str, float] = field(default_factory=dict)
     models_used: list[str] = field(default_factory=list)
+    coverage_gaps: list[str] | None = None
     retries: int = 0
     request_log: list[dict] = field(default_factory=list)
 
@@ -149,6 +150,15 @@ class Agent:
             raw += pass_raw
             set_verdicts = _merge_set_verdicts(set_verdicts, pass_verdicts)
 
+        # Capture model coverage before reconciling the matrix with grounded findings.
+        gaps = [] if reqs else ["Нарезка не выделила ни одного требования."]
+        for requirement in reqs:
+            if not any(v in ("pass", "fail", "na") for v in requirement.verdicts.values()):
+                gaps.append(f"{requirement.id}: отсутствует оценка критериев.")
+        for criterion in SET:
+            if set_verdicts.get(criterion.code, {}).get("status", "unknown") == "unknown":
+                gaps.append(f"{criterion.code}: нет оценки набора требований.")
+
         findings, dropped = self._ground(raw, loc)
         findings += self._rule_findings(hits)
         if not self.verify:
@@ -187,13 +197,17 @@ class Agent:
             self._reconcile_verdicts(reqs, findings)
         dev, test = _gate(findings, acs, dev, test)
 
+        if gaps:
+            dev = "conditional" if dev == "yes" else dev
+            test = "conditional" if test == "yes" else test
+
         return RunResult(
             doc=doc, model=self.llm.label, started=started, duration_s=time.time() - t0,
             requirements=reqs, acceptance=acs, skipped=skipped, findings=findings,
             dropped=dropped, set_verdicts=set_verdicts, dev_ready=dev, test_ready=test,
             verdict_text=text, priority_fixes=fixes, llm_calls=self.llm.calls,
             cache_hits=self.llm.cache_hits, agent_version=self.agent_version,
-            stage_durations=stages, models_used=list(self.llm.models_used),
+            coverage_gaps=gaps, stage_durations=stages, models_used=list(self.llm.models_used),
             retries=getattr(self.llm, "retries", 0), request_log=list(self.llm.request_log))
 
     # --- шаг 2: нарезка ----------------------------------------------
