@@ -68,7 +68,18 @@ quotes (включая цитату этой строки), question (какое
                 item["_hint"] = line
             candidates.append(item)
     agent = Agent(client, verbose=False)
-    additions, discarded = agent._ground(candidates, Locator(document))
+    locator = Locator(document)
+    additions, discarded = [], []
+    for candidate in candidates:
+        grounded, rejected = agent._ground([candidate], locator)
+        discarded.extend(rejected)
+        for finding in grounded:
+            target = candidate.get("_hint")
+            if target is not None and not any(e.line_start <= target <= e.line_end for e in finding.evidence):
+                discarded.append(dict(scope=finding.scope, criterion=finding.criterion, problem=finding.problem,
+                                      reason=f"Нет подтверждающей цитаты строки {target}"))
+                continue
+            additions.append(finding)
     additions = _dedupe(additions)
     if additions:
         items = [[i, f.problem, [e.quote for e in f.evidence]] for i, f in enumerate(additions, 1)]
@@ -81,12 +92,14 @@ quotes (включая цитату этой строки), question (какое
                  and type(d.get("keep")) is bool}
         if len(decisions) != len(additions) or set(by_id) != set(range(1, len(additions) + 1)):
             raise ValueError("Ревьюер вернул неполный список решений")
+        next_id = max((int(f.id[2:]) for f in result.findings), default=0) + 1
         for i, f in enumerate(additions, 1):
             if not by_id[i]["keep"]:
                 discarded.append(dict(scope="SET", criterion=f.criterion, problem=f.problem,
                                       reason=str(by_id[i].get("reason") or "отклонено ревьюером")))
                 continue
-            f.id = f"F-{len(result.findings) + 1:03d}"
+            f.id = f"F-{next_id:03d}"
+            next_id += 1
             result.findings.append(f)
             if f.criterion in result.set_verdicts:
                 result.set_verdicts[f.criterion] = dict(status="fail", comment=f.problem)
