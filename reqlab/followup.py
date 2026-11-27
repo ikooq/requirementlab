@@ -17,7 +17,7 @@ from .prompts import SYSTEM, SEVERITY_GUIDE
 from .report import render, render_brief
 
 
-def extend(document, source, client):
+def extend(document, source, client, focus_lines=()):
     raw = source.read_bytes()
     saved = json.loads(raw)
     _, errors = audit(saved, document)
@@ -39,9 +39,34 @@ criterion из списка, severity, дословные quotes, problem, recom
 """ + criteria_block(SET) + "\n" + SEVERITY_GUIDE + "\n" + context
     started = datetime.now().astimezone()
     tick = time.monotonic()
-    reply = client.complete_json(SYSTEM, prompt, step="поиск пропущенных сценариев: контрпримеры")
+    candidates = []
+    for line in dict.fromkeys(focus_lines or [None]):
+        task = prompt
+        if line is not None:
+            if not 1 <= line <= len(document.lines):
+                raise ValueError(f"Строка {line} вне документа")
+            task += f"""
+Разбери только строку {line}: {document.lines[line-1]}
+Построй минимальный отличающий пример: задай начальное состояние, два события или две
+величины с разными числовыми значениями. Для операции проверь отмену до завершения,
+обратное событие после завершения и повтор. Для передаваемого поля проследи источник
+значения. Выпиши две конкурирующие трактовки и проверь их по всему документу.
+Если одна исключена текстом, не выдавай её за допустимую. Если осталось две — верни
+одну находку с полями scenario, outcome_a, outcome_b (конкретные разные результаты),
+quotes (включая цитату этой строки), question (какое правило выбирает владелец).
+Не смешивай разные начальные условия. Если двусмысленность не подтверждается, findings пуст."""
+        reply = client.complete_json(SYSTEM, task, step="поиск пропущенных сценариев: контрпримеры")
+        for item in reply["findings"]:
+            item = dict(item, scope="SET")
+            if line is not None:
+                fields = [item.get(k) for k in ("scenario", "outcome_a", "outcome_b", "question")]
+                if not all(isinstance(v, str) and v.strip() for v in fields) or fields[1] == fields[2]:
+                    continue
+                item["problem"] += f" Пример: {fields[0]} Вариант 1: {fields[1]} Вариант 2: {fields[2]}"
+                item["_hint"] = line
+            candidates.append(item)
     agent = Agent(client, verbose=False)
-    additions, discarded = agent._ground([dict(f, scope="SET") for f in reply["findings"]], Locator(document))
+    additions, discarded = agent._ground(candidates, Locator(document))
     additions = _dedupe(additions)
     if additions:
         items = [[i, f.problem, [e.quote for e in f.evidence]] for i, f in enumerate(additions, 1)]
@@ -83,6 +108,7 @@ def main():
     for key in ("document", "source", "output"):
         parser.add_argument(key, type=Path)
     parser.add_argument("--model")
+    parser.add_argument("--focus-line", action="append", type=int, default=[], help="проверить трактовки указанной строки")
     args = parser.parse_args()
     output = args.output
     targets = [output, output.with_suffix(".json"), output.with_name(output.stem + "-brief.md")]
@@ -91,7 +117,7 @@ def main():
     _load_env()
     try:
         client = from_env(model=args.model, cache_dir=ROOT / ".cache" / "followup")
-        result = extend(load(args.document), args.source, client)
+        result = extend(load(args.document), args.source, client, args.focus_line)
         targets[0].parent.mkdir(parents=True, exist_ok=True)
         for target, content in zip(targets, (render(result), json.dumps(result.to_json(), ensure_ascii=False, indent=2),
                                              render_brief(result))):
