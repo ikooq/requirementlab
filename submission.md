@@ -25,17 +25,33 @@ RequirementLab — AI-агент статического ревью требо�
 6. **Любой формат.** MD, TXT, PDF и DOCX; таблицы PDF восстанавливаются целиком, включая пустые ячейки.
 7. **Надёжность на бесплатном тарифе.** Несколько ключей, запасные модели, кэш ответов; перегрузку сервера агент пережидает.
 
-## Как воспроизвести
+## Как проверить сдаваемый отчёт
+
+Комплект содержит результаты анализа версии `v1.3.0`. Чтобы проверить цитаты и регрессионные метрики без ключа и без обращения к модели, в чистой копии выполните:
 
 ```bash
-git clone --branch audit-work https://github.com/ikooq/requirementlab && cd requirementlab
+git clone --branch audit-work https://github.com/ikooq/requirementlab
+cd requirementlab
 python -m pip install -r requirements.txt
-cp .env.example .env            # Windows: copy .env.example .env — впишите GEMINI_API_KEY
-curl -L --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md
-python run.py docs/requirements.md reports/report.md
+curl -fL --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md
+python -m eval.evidence docs/requirements.md reports/report.json
+python -m eval.promotion gate reports/report.json eval/promotion-review.csv
 ```
 
-Ключ Gemini бесплатный: https://aistudio.google.com/apikey. Отчёт ляжет в `reports/report.md`, данные — в `reports/report.json`.
+Ожидаемый результат для этого комплекта — 70 подтверждённых цитат, 37/41 дефектов эталона и 6/6 критичных. Внутренняя точность 95% получена по 38 автоматическим совпадениям с командным эталоном и двум ранее отмеченным дублям.
+
+## Как повторить анализ той же версией агента
+
+В той же чистой копии переключитесь на тег генератора. Впишите ключ Gemini в локальный файл `.env`. В PowerShell вместо `cp` можно использовать `Copy-Item`.
+
+```bash
+git checkout v1.3.0
+python -m pip install -r requirements.txt
+cp .env.example .env
+python run.py docs/requirements.md reports/replay-v130.md --model gemini-3.5-flash --passes 2 --batch-size 6 --no-cache
+```
+
+Команда запускает штатную конфигурацию тега и сохраняет новый отчёт отдельно. Опубликованный JSON v1.3.0 не записывал размер пакета и число проходов; его паспорт сообщает о 18 ответах из кэша. При новом обращении к API состав находок может измениться. Проверяйте фактически ответившую модель. Для ориентира, в отдельном прогоне на коде d2b3fe9 после исчерпания квоты все ответы дала gemini-3.5-flash-lite: один проход пакетами по 12 дал 17/41 и 3/6 критичных. Влияние одной только замены модели этим опытом не измерено.
 
 ## Скачать комплект подачи
 
