@@ -533,3 +533,15 @@ def test_cli_continues_interrupted_run_without_repeating_segmentation(tmp_path, 
     assert result["cache_hits"] == 1
     assert result["findings"]
     assert cli.main([*args, "--continue-run", directory.name, "--no-verify"]) == 2
+
+
+def test_type_conflict_cites_both_declarations_and_ignores_fenced_examples(tmp_path):
+    spec = tmp_path / "schema.md"
+    header = "| Parameter | Format |\n"
+    spec.write_text(header + "| amount | integer |\n\n~~~markdown\n" + header
+                    + "| amount | boolean |\n~~~\n\n" + header + "| amount | string |\n",
+                    encoding="utf-8")
+    hits = [h for h in rules.run(load(spec)) if h.rule == "type-mismatch"]
+    finding, = Agent(FakeLLM(), verbose=False)._rule_findings(hits)
+    assert [(e.line_start, e.quote) for e in finding.evidence] == [
+        (10, "| amount | string |"), (2, "| amount | integer |")]

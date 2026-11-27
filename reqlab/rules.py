@@ -39,6 +39,7 @@ class RuleHit:
     quote: str
     problem: str
     recommendation: str
+    related_line: tuple[int, str] | None = None
 
 
 _NAME_COLS = ("parameter", "параметр", "поле", "field", "name")
@@ -54,9 +55,18 @@ def _type_mismatches(doc: Document) -> list[RuleHit]:
     seen: dict[str, tuple[str, int]] = {}
     hits: list[RuleHit] = []
     name_i = type_i = None
+    fence = ""
     for i, line in enumerate(doc.lines, 1):
         s = line.strip()
-        if not s.startswith("|"):
+        marker = re.match(r"^`{3,}|^~{3,}", s)
+        if marker:
+            if not fence:
+                fence = marker.group()
+            elif s.startswith(fence) and not s.strip(fence[0]):
+                fence = ""
+            name_i = type_i = None
+            continue
+        if fence or not s.startswith("|"):
             name_i = type_i = None
             continue
         if _SEPARATOR_RE.match(s):
@@ -79,7 +89,8 @@ def _type_mismatches(doc: Document) -> list[RuleHit]:
                 "type-mismatch", "S-CON", "major", i, i, s,
                 f"Параметр `{name}` объявлен с разными типами: «{first_typ}» в строке "
                 f"{first_line} и «{typ}» в строке {i}.",
-                f"Задать для `{name}` один тип во всех таблицах и примерах."))
+                f"Согласовать представление поля `{name}` или описать преобразование.",
+                related_line=(first_line, doc.lines[first_line - 1].strip())))
         seen.setdefault(name, (typ, i))
     return hits
 

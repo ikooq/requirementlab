@@ -417,9 +417,13 @@ class Agent:
         for h in hits:
             if h.rule == "vague-word":
                 continue  # размытые слова — только подсказка модели, без отдельной находки
+            evidence = [Evidence(h.quote, h.line_start, h.line_end, True)]
+            if h.related_line:
+                line, quote = h.related_line
+                evidence.append(Evidence(quote, line, line, True))
             out.append(Finding(id="", scope="SET", criterion=h.criterion, severity=h.severity,
                                problem=h.problem, recommendation=h.recommendation, question="",
-                               evidence=[Evidence(h.quote, h.line_start, h.line_end, True)],
+                               evidence=evidence,
                                source="rule"))
         return out
 
