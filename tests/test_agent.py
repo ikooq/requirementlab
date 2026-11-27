@@ -398,4 +398,8 @@ def test_full_pipeline_and_report(spec):
     brief = render_brief(res)
     assert "Итог: разработку начинать — **Нет**" in brief
     assert "## 3." not in brief and len(brief) < len(md) / 2
+    # отчёт пересобирается из JSON без модели и совпадает с исходным
+    from reqlab.pipeline import RunResult
+    again = RunResult.from_json(json.loads(json.dumps(res.to_json(), ensure_ascii=False)), res.doc)
+    assert render(again) == md
     json.dumps(res.to_json(), ensure_ascii=False)

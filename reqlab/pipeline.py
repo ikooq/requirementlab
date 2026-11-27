@@ -87,6 +87,16 @@ class RunResult:
                          "sha256": self.doc.sha256, "lines": len(self.doc.lines)}
         return d
 
+    @classmethod
+    def from_json(cls, d: dict, doc: Document) -> "RunResult":
+        """Обратная операция к to_json: пересобрать отчёт из сохранённых данных без модели."""
+        d = {k: v for k, v in d.items() if k != "document"}
+        d["started"] = datetime.fromisoformat(d["started"])
+        d["requirements"] = [Requirement(**r) for r in d["requirements"]]
+        d["findings"] = [Finding(**{**f, "evidence": [Evidence(**e) for e in f["evidence"]]})
+                         for f in d["findings"]]
+        return cls(doc=doc, **d)
+
 
 class Agent:
     def __init__(self, llm: LLM, *, batch_size: int = 6, verify: bool = True,
