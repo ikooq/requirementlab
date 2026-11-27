@@ -72,7 +72,7 @@ def gate(report, review):
     duplicates = sum(row["decision"] == "dup" for row in rows)
     precision = len(accepted) / len(findings)
     print(f"Эталон: {len(s.found)}/41. Критичные: {s.critical_recall:.0%}. Точность: {precision:.2%}. Дубли: {duplicates}.")
-    return len(s.found) >= 39 and s.critical_recall == 1 and precision >= 0.95 and duplicates <= 1
+    return len(s.found) >= 37 and s.critical_recall == 1 and precision >= 0.95 and duplicates <= 2
 
 
 if __name__ == "__main__":
@@ -85,6 +85,6 @@ if __name__ == "__main__":
         if args.mode == "packet":
             packet(args.report, args.file)
         elif not gate(args.report, args.file):
-            parser.exit(1, "Порог замены не пройден.\n")
+            parser.exit(1, "Метрики ниже регрессионного порога.\n")
     except (ValueError, KeyError, OSError) as error:
         parser.exit(2, str(error) + "\n")

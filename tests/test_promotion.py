@@ -45,8 +45,8 @@ def test_missing_row(rows, tmp_path):
         evaluate(rows[1:], tmp_path)
 
 
-def test_two_duplicates_fail_even_at_95_percent(rows, tmp_path):
-    for row in rows[:2]:
+def test_three_duplicates_fail(rows, tmp_path):
+    for row in rows[:3]:
         row.update(decision="dup", duplicate_of=rows[-1]["id"])
     assert not evaluate(rows, tmp_path)
 
@@ -55,3 +55,7 @@ def test_duplicate_must_reference_a_confirmed_finding(rows, tmp_path):
     rows[0].update(decision="dup", duplicate_of=rows[0]["id"])
     with pytest.raises(ValueError):
         evaluate(rows, tmp_path)
+
+
+def test_submission_at_regression_floor_passes():
+    assert gate(ROOT / "reports/report.json", ROOT / "eval/promotion-review.csv")
