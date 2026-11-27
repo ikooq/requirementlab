@@ -1,5 +1,6 @@
 """Офлайн-просмотр находок и исходного текста. python -m reqlab.reader DOC REPORT.json OUT.html"""
 import argparse
+import hashlib
 import json
 from html import escape
 from pathlib import Path
@@ -26,6 +27,21 @@ a{color:#004f80}li{padding:.2rem;white-space:pre-wrap;overflow-wrap:anywhere}li:
     out.append(f"<p>Требований: {len(report['requirements'])}. Находок: {len(findings)}. "
                f"Разработка: {escape(READY_RU[report['dev_ready']])}. "
                f"Тестирование: {escape(READY_RU[report['test_ready']])}.</p>")
+    questions = [f for f in findings if (f.get("question") or "").strip()]
+    if questions:
+        signature = hashlib.sha256(json.dumps(report, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        out.append(f'<section id="decisions" data-report="{signature}"><h2>Вопросы владельцу требований</h2>'
+                   '<p>Откройте вопрос, сверьте цитату и запишите решение. Перед закрытием страницы '
+                   'скачайте ответы. Чтобы продолжить работу, загрузите сохранённый файл.</p>'
+                   '<p id="progress" aria-live="polite"></p><button id="save">Скачать ответы</button> '
+                   '<label>Загрузить ответы <input id="restore" type="file" accept=".json"></label>'
+                   '<p id="message" role="status"></p><ol>')
+        for severity in SEVERITY_RU:
+            for f in questions:
+                if f["severity"] == severity:
+                    fid = escape(f["id"], quote=True)
+                    out.append(f'<li><a href="#{fid}">{fid} · {escape(f["question"])}</a></li>')
+        out.append('</ol></section>')
     for gap in report.get("coverage_gaps") or []:
         out.append(f"<p>Проверка неполна: {escape(gap)}</p>")
     out.append("<main><section><h2>Находки</h2>")
@@ -45,11 +61,19 @@ a{color:#004f80}li{padding:.2rem;white-space:pre-wrap;overflow-wrap:anywhere}li:
                 out.append(f'<p><a href="#L{a}">Стр. {a}–{b}</a> · {escape(e["quote"])}</p>')
             if f.get("recommendation"):
                 out.append(f'<p><b>Как исправить.</b> {escape(f["recommendation"])}</p>')
+            if (f.get("question") or "").strip():
+                out.append(f'<p><label>{escape(f["question"])}<br>'
+                           f'<textarea data-finding="{fid}" rows="3" cols="45" '
+                           'placeholder="Решение владельца требования"></textarea></label></p>')
             out.append("</article>")
     out.append('</section><section><h2>Исходный документ</h2><div class="source"><ol>')
     for number, line in enumerate(document.lines, 1):
         out.append(f'<li id="L{number}">{escape(line)}</li>')
-    out.append("</ol></div></section></main></html>")
+    out.append("</ol></div></section></main>")
+    if questions:
+        script = Path(__file__).with_name("review-answers.js").read_text(encoding="utf-8")
+        out.append(f"<script>{script}</script>")
+    out.append("</html>")
     return "\n".join(out)
 
 

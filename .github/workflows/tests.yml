@@ -25,6 +25,12 @@ jobs:
           python -m eval.evidence docs/blind/statement.md reports/blind/statement-two-pass.json
           python eval/score.py reports/blind/autopay-consensus.json --holdout --min-recall 0.96 --min-critical-recall 1
           python -m eval.evidence docs/blind/autopay.md reports/blind/autopay-consensus.json
+      - run: python -m reqlab.reader docs/requirements.md reports/report.json reports/review.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: analyst-workspace
+          path: reports/review.html
+          if-no-files-found: error
       - name: Prepare isolated reviewer packet
         run: python -m eval.promotion packet reports/promotion-candidate.json independent-review.zip
       - uses: actions/upload-artifact@v4
