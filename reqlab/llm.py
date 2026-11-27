@@ -29,6 +29,17 @@ class LLMError(Exception):
     pass
 
 
+class LLMBadJSON(LLMError):
+    """Модель несколько раз подряд вернула ответ, который не разбирается как JSON.
+    Вызывающий код может уменьшить запрос (например, разбить пакет) и спросить снова."""
+
+
+# Сколько раз просить модель исправить свой невалидный JSON, прежде чем сдаться.
+JSON_REPAIRS = 2
+# Сколько символов плохого ответа показывать модели при просьбе исправить его.
+_REPAIR_ECHO = 20000
+
+
 class _Retryable(Exception):
     def __init__(self, msg: str, wait: float | None = None, status: int = 0,
                  daily_quota: bool = False):
@@ -131,6 +142,7 @@ class LLM:
         prompt = user
         last_err = ""
         fails_on_model = 0
+        bad_json = 0
         attempt = 0
         # Лимит попыток считается на модель: переход на запасную модель даёт ей
         # полный набор попыток, иначе до последних запасных дело не доходит.
@@ -165,9 +177,18 @@ class LLM:
                 data = parse_json(text)
             except (ValueError, json.JSONDecodeError) as e:
                 last_err = f"невалидный JSON: {e}"
-                self._log(f"  [{step}] {last_err}; прошу модель повторить")
-                prompt = (user + "\n\nВНИМАНИЕ: предыдущий ответ не был валидным JSON. "
-                          "Верни только один JSON-объект без пояснений и без markdown.")
+                bad_json += 1
+                if bad_json > JSON_REPAIRS:
+                    raise LLMBadJSON(f"Модель не дала корректный JSON на шаге «{step}»: {e}")
+                # Повтор того же запроса при температуре 0 даёт тот же ответ. Поэтому
+                # показываем модели её ответ и ошибку разбора и просим исправить именно его.
+                self._log(f"  [{step}] {last_err}; прошу модель исправить свой ответ")
+                prompt = (user + "\n\nТвой предыдущий ответ не разбирается как JSON. Ошибка "
+                          f"разборщика: {e}. Вот этот ответ:\n<<<\n{text[:_REPAIR_ECHO]}\n>>>\n"
+                          "Верни тот же ответ, исправив синтаксис: один JSON-объект целиком, "
+                          "без пояснений и без markdown. Проверь запятые между элементами и "
+                          "экранирование кавычек внутри строк.")
+                attempt -= 1  # ошибка формата не тратит попытки на перегрузку сервера
                 continue
             self._cache_put(key, data, self.model)
             return data

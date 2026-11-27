@@ -18,7 +18,7 @@ from datetime import datetime
 from . import prompts, rules
 from .criteria import ALL, INDIVIDUAL, SET, SEVERITIES
 from .grounding import Locator
-from .llm import LLM
+from .llm import LLM, LLMBadJSON
 from .loader import Document
 
 _EXPLICIT_ID = re.compile(r"\*{0,2}\b([ФF]Т?-\d+|НФТ-\d+|NFR-\d+|FR-\d+|BR-\d+|REQ-\d+)\b")
@@ -279,7 +279,18 @@ class Agent:
             criteria=prompts.individual_criteria(), severity=prompts.CHECK_GUIDE,
             hints=hint_txt, all_reqs=_req_list(reqs), targets=_req_targets(batch),
             title=doc.title, doc=numbered)
-        data = self._ask(user, f"проверка {batch[0].id}…{batch[-1].id}")
+        try:
+            data = self._ask(user, f"проверка {batch[0].id}…{batch[-1].id}")
+        except LLMBadJSON as e:
+            # Длинный ответ на большой пакет ломается чаще: делим пакет пополам.
+            if len(batch) == 1:
+                self.log(f"    {batch[0].id} не проверено: {e}")
+                return []
+            mid = len(batch) // 2
+            self.log(f"    пакет {batch[0].id}…{batch[-1].id} делю пополам: модель не дала "
+                     "корректный JSON")
+            return (self._check_batch(doc, numbered, reqs, batch[:mid], hits)
+                    + self._check_batch(doc, numbered, reqs, batch[mid:], hits))
         by_id = {r.id: r for r in batch}
         out: list[dict] = []
         for res in data.get("results") or []:

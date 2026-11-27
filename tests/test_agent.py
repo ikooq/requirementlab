@@ -448,3 +448,62 @@ def test_repeated_quote_shown_once():
     from reqlab.pipeline import Evidence, _unique_evidence
     ev = [Evidence("a", 64, 64, True), Evidence("a", 64, 64, True), Evidence("b", 38, 38, True)]
     assert [e.line_start for e in _unique_evidence(ev)] == [64, 38]
+
+
+def test_bad_json_is_repaired_with_parser_error():
+    """Повтор того же запроса при температуре 0 даёт тот же ответ, поэтому модели
+    показывают её ответ и ошибку разбора — и запрос уже другой."""
+    class Broken(LLM):
+        provider = "fake"
+
+        def __init__(self):
+            super().__init__("fake-1", verbose=False)
+            self.prompts = []
+
+        def _call(self, system, user):
+            self.prompts.append(user)
+            return '{"a": 1 "b": 2}' if len(self.prompts) == 1 else '{"a": 1, "b": 2}'
+
+    llm = Broken()
+    assert llm.complete_json("s", "u") == {"a": 1, "b": 2}
+    assert len(llm.prompts) == 2 and llm.prompts[0] != llm.prompts[1]
+    assert '{"a": 1 "b": 2}' in llm.prompts[1] and "Ошибка разборщика" in llm.prompts[1]
+
+
+def test_bad_json_gives_up_with_specific_error():
+    from reqlab.llm import JSON_REPAIRS, LLMBadJSON
+
+    class Hopeless(LLM):
+        provider = "fake"
+
+        def __init__(self):
+            super().__init__("fake-1", verbose=False)
+            self.n = 0
+
+        def _call(self, system, user):
+            self.n += 1
+            return "не json"
+
+    llm = Hopeless()
+    with pytest.raises(LLMBadJSON):
+        llm.complete_json("s", "u")
+    assert llm.n == JSON_REPAIRS + 1
+
+
+def test_batch_is_split_when_model_keeps_breaking_json(spec):
+    """Пакет из нескольких требований, на который модель не даёт JSON, делится пополам;
+    требования по отдельности проверяются, прогон не падает."""
+    class SplitLLM(FakeLLM):
+        def _call(self, system, user):
+            targets = user.split("Проверь требования:")[-1].split("Формат ответа")[0]
+            if "проверить КАЖДОЕ" in user and targets.count("[") > 1:
+                self.broken += 1
+                return "сломано"
+            return super()._call(system, user)
+
+    llm = SplitLLM()
+    llm.broken = 0
+    res = Agent(llm, verbose=False).run(load(spec))
+    assert llm.broken > 0
+    assert all(r.verdicts for r in res.requirements)
+    assert any(f.criterion == "VER" and f.severity == "critical" for f in res.findings)
