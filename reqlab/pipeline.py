@@ -366,7 +366,7 @@ class Agent:
                 id="", scope=f.get("scope", "SET"), criterion=crit,
                 severity=sev if sev in SEVERITIES else "major", problem=problem,
                 recommendation=str(f.get("recommendation") or "").strip(),
-                question=str(f.get("question") or "").strip(), evidence=ev,
+                question=str(f.get("question") or "").strip(), evidence=_unique_evidence(ev),
                 related=[str(x) for x in (f.get("related") or [])]))
         return findings, dropped
 
@@ -409,12 +409,19 @@ class Agent:
         data = self.llm.complete_json(prompts.SYSTEM, user, step="второй ревьюер")
         by_id = {f.id: f for f in findings}
         dropped = []
+        dup_of: dict[str, str] = {}
         for d in data.get("decisions") or []:
             f = by_id.get(str(d.get("id") or ""))
             if not f:
                 continue
             reason = str(d.get("reason") or "").strip()
             if d.get("keep") is False and f.source != "rule":
+                target = str(d.get("duplicate_of") or "").strip()
+                if not target:
+                    m = re.search(r"дубл\w*\s+(F-\d{3})", reason, re.I)
+                    target = m.group(1) if m else ""
+                if target in by_id and target != f.id:
+                    dup_of[f.id] = target
                 dropped.append({"id": f.id, "scope": f.scope, "criterion": f.criterion,
                                 "reason": reason or "отклонено вторым ревьюером",
                                 "problem": f.problem[:200]})
@@ -423,6 +430,19 @@ class Agent:
             if sev in SEVERITIES and sev != f.severity:
                 f.reviewer_note = f"Серьёзность изменена вторым ревьюером: {f.severity} → {sev}. {reason}".strip()
                 f.severity = sev
+        # Дубликат не теряется: его цитаты и связи переходят к оставленной находке.
+        gone = {d["id"] for d in dropped}
+        for src, dst in dup_of.items():
+            seen = {src}
+            while dst in gone and dst in dup_of and dst not in seen:  # цепочка дубликатов
+                seen.add(dst)
+                dst = dup_of[dst]
+            if dst in gone:
+                continue
+            _absorb(by_id[dst], by_id[src])
+            for d in dropped:
+                if d["id"] == src:
+                    d["reason"] = f"объединена с {dst}. {d['reason']}".strip()
         fixes = []
         for p in data.get("priority_fixes") or []:
             ids = [i for i in (p.get("finding_ids") or []) if i in by_id]
@@ -492,14 +512,60 @@ def _gate(findings, acs, dev: str, test: str) -> tuple[str, str]:
 
 
 def _dedupe(findings: list[Finding]) -> list[Finding]:
+    """Точные повторы снимаются, почти одинаковые находки склеиваются в одну.
+
+    Почти одинаковые — основное место (первая цитата) на тех же строках и описания
+    проблемы совпадают по словам хотя бы наполовину. Так склеиваются повторы из двух
+    проходов, а разные дефекты на одной строке остаются разными."""
     seen, out = set(), []
     for f in findings:
         key = (f.scope, f.criterion, f.evidence[0].line_start, f.problem[:50].lower())
         if key in seen:
             continue
+        twin = next((g for g in out if g.source == f.source == "llm" and _same_place(g, f)
+                     and _similar(g.problem, f.problem) >= 0.5), None)
+        if twin:
+            _absorb(twin, f)
+            continue
         seen.add(key)
         out.append(f)
     return out
+
+
+_WORD = re.compile(r"[\wА-Яа-яЁё-]{4,}")
+
+
+def _stems(text: str) -> set[str]:
+    return {w.lower()[:6] for w in _WORD.findall(text or "")}
+
+
+def _similar(a: str, b: str) -> float:
+    sa, sb = _stems(a), _stems(b)
+    return len(sa & sb) / len(sa | sb) if sa and sb else 0.0
+
+
+def _same_place(a: Finding, b: Finding) -> bool:
+    ea, eb = a.evidence[0], b.evidence[0]
+    return (ea.line_start, ea.line_end) == (eb.line_start, eb.line_end)
+
+
+def _unique_evidence(ev: list[Evidence], limit: int = 5) -> list[Evidence]:
+    """Одна и та же цитата дважды в находке не нужна."""
+    out, seen = [], set()
+    for e in ev:
+        key = (e.line_start, e.line_end, e.quote.strip().lower())
+        if key not in seen and (e.line_start, e.line_end) not in {(o.line_start, o.line_end) for o in out}:
+            seen.add(key)
+            out.append(e)
+    return out[:limit]
+
+
+def _absorb(keep: Finding, dup: Finding) -> None:
+    """Склеить дубликат с оставленной находкой: цитаты, связи и худшая серьёзность."""
+    keep.evidence = _unique_evidence(keep.evidence + dup.evidence)
+    keep.related = list(dict.fromkeys(keep.related + dup.related))
+    if SEVERITIES.index(dup.severity) < SEVERITIES.index(keep.severity):
+        keep.severity = dup.severity
 
 
 def _renumber(findings: list[Finding]) -> None:

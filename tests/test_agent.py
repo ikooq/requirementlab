@@ -403,3 +403,48 @@ def test_full_pipeline_and_report(spec):
     again = RunResult.from_json(json.loads(json.dumps(res.to_json(), ensure_ascii=False)), res.doc)
     assert render(again) == md
     json.dumps(res.to_json(), ensure_ascii=False)
+
+
+def _f(fid, scope, sev, problem, lines, source="llm"):
+    from reqlab.pipeline import Evidence, Finding
+    ev = [Evidence(f"цитата {a}", a, a, True) for a in lines]
+    return Finding(id=fid, scope=scope, criterion="COR", severity=sev, problem=problem,
+                   recommendation="", question="", evidence=ev, source=source)
+
+
+def test_near_duplicates_from_two_passes_are_merged():
+    from reqlab.pipeline import _dedupe
+    a = _f("", "R-01", "major", "Метод сохранения использует GET вместо POST для изменения данных", [52])
+    b = _f("", "R-01", "critical", "Для изменения данных метод сохранения использует GET, нужен POST", [52, 104])
+    c = _f("", "R-01", "major", "Не задано сообщение об ошибке ввода суммы", [52])
+    out = _dedupe([a, b, c])
+    assert len(out) == 2                      # разный дефект на той же строке остался
+    assert out[0].severity == "critical"      # худшая серьёзность
+    assert [e.line_start for e in out[0].evidence] == [52, 104]  # цитаты объединены
+
+
+def test_critic_duplicate_hands_evidence_to_kept_finding():
+    class Critic(LLM):
+        provider = "fake"
+        def __init__(self):
+            super().__init__("m", verbose=False)
+        def _call(self, system, user):
+            return json.dumps({"decisions": [
+                {"id": "F-001", "keep": True, "severity": "critical"},
+                {"id": "F-002", "keep": False, "reason": "дубликат F-001"}],
+                "dev_ready": "no", "test_ready": "no", "verdict": "", "priority_fixes": []})
+    from reqlab.loader import Document
+    doc = Document(path=Path("d.md"), name="d.md", title="d", lines=["x"] * 200, sha256="0", fmt="md")
+    keep = _f("F-001", "SET", "critical", "GET для изменения", [103])
+    dup = _f("F-002", "R-10", "critical", "небезопасный метод", [52, 104])
+    agent = Agent(Critic(), verbose=False)
+    *_, dropped = agent._critic(doc, "", [keep, dup])
+    assert [d["id"] for d in dropped] == ["F-002"]
+    assert dropped[0]["reason"].startswith("объединена с F-001")
+    assert [e.line_start for e in keep.evidence] == [103, 52, 104]
+
+
+def test_repeated_quote_shown_once():
+    from reqlab.pipeline import Evidence, _unique_evidence
+    ev = [Evidence("a", 64, 64, True), Evidence("a", 64, 64, True), Evidence("b", 38, 38, True)]
+    assert [e.line_start for e in _unique_evidence(ev)] == [64, 38]
