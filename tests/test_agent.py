@@ -633,3 +633,16 @@ def test_partial_batch_recovers_only_missing_requirements(spec):
     result = Agent(model, verbose=False).run(load(spec))
     assert model.recoveries == 1
     assert all(any(v != "unknown" for v in r.verdicts.values()) for r in result.requirements)
+
+
+def test_cycle_of_duplicates_preserves_both_findings(spec):
+    class Critic(FakeLLM):
+        def _call(self, system, user):
+            return json.dumps({"decisions": [
+                {"id": "F-001", "keep": False, "duplicate_of": "F-002"},
+                {"id": "F-002", "keep": False, "duplicate_of": "F-001"},
+            ]})
+    left = _f("F-001", "SET", "critical", "First", [3])
+    right = _f("F-002", "R-01", "critical", "Second", [5])
+    *_, dropped = Agent(Critic(), verbose=False)._critic(load(spec), "", [left, right])
+    assert dropped == []

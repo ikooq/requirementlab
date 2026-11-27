@@ -463,7 +463,7 @@ class Agent:
         for f in findings:
             q = " | ".join(f"«{e.quote[:160]}» (стр. {e.line_start})" for e in f.evidence)
             lines.append(f"- {f.id} [{f.scope}, {f.criterion}, {f.severity}, {f.source}] "
-                         f"{f.problem} Цитаты: {q}")
+                         f"{f.problem} Предложенная правка: {f.recommendation} Вопрос: {f.question} Цитаты: {q}")
         user = prompts.CRITIC.format(severity=prompts.SEVERITY_GUIDE, findings="\n".join(lines),
                                      title=doc.title, doc=numbered)
         data = self.llm.complete_json(prompts.SYSTEM, user, step="второй ревьюер")
@@ -500,6 +500,7 @@ class Agent:
                 f.severity = sev
         # Дубликат не теряется: его цитаты и связи переходят к оставленной находке.
         gone = {d["id"] for d in dropped}
+        merged = {}
         for src, dst in dup_of.items():
             seen = {src}
             while dst in gone and dst in dup_of and dst not in seen:  # цепочка дубликатов
@@ -507,13 +508,16 @@ class Agent:
                 dst = dup_of[dst]
             if dst in gone:
                 continue
+            merged[src] = dst
             _absorb(by_id[dst], by_id[src])
             for d in dropped:
                 if d["id"] == src:
                     d["reason"] = f"объединена с {dst}. {d['reason']}".strip()
+        # A duplicate can only disappear when there is a surviving original.
+        dropped = [d for d in dropped if d["id"] not in dup_of or d["id"] in merged]
         fixes = []
         for p in data.get("priority_fixes") or []:
-            ids = [i for i in (p.get("finding_ids") or []) if i in by_id]
+            ids = list(dict.fromkeys(merged.get(i, i) for i in (p.get("finding_ids") or []) if i in by_id))
             if p.get("action"):
                 fixes.append({"action": str(p["action"]), "finding_ids": ids})
         return (str(data.get("dev_ready") or ""), str(data.get("test_ready") or ""),
