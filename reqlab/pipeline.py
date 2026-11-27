@@ -304,7 +304,7 @@ class Agent:
         return self.llm.complete_json(prompts.SYSTEM, user + self._note, step=step + tag)
 
     # --- шаг 3: проверка требований ------------------------------------
-    def _check_batch(self, doc, numbered, reqs, batch, hits) -> list[dict]:
+    def _check_batch(self, doc, numbered, reqs, batch, hits, *, recover=True) -> list[dict]:
         lines = set()
         for r in batch:
             lines.update(range(r.line_start, r.line_end + 1))
@@ -314,6 +314,8 @@ class Agent:
             criteria=prompts.individual_criteria(), severity=prompts.CHECK_GUIDE,
             hints=hint_txt, all_reqs=_req_list(reqs), targets=_req_targets(batch),
             title=doc.title, doc=numbered)
+        if not recover:
+            user += "\nПроверь каждый указанный идентификатор: предыдущий ответ пропустил эти требования."
         try:
             data = self._ask(user, f"проверка {batch[0].id}…{batch[-1].id}")
         except LLMBadJSON as e:
@@ -324,22 +326,29 @@ class Agent:
             mid = len(batch) // 2
             self.log(f"    пакет {batch[0].id}…{batch[-1].id} делю пополам: модель не дала "
                      "корректный JSON")
-            return (self._check_batch(doc, numbered, reqs, batch[:mid], hits)
-                    + self._check_batch(doc, numbered, reqs, batch[mid:], hits))
+            return (self._check_batch(doc, numbered, reqs, batch[:mid], hits, recover=recover)
+                    + self._check_batch(doc, numbered, reqs, batch[mid:], hits, recover=recover))
         by_id = {r.id: r for r in batch}
         out: list[dict] = []
+        reviewed = set()
         for res in data.get("results") or []:
             r = by_id.get(str(res.get("req_id") or "").strip())
             if not r:
                 continue
             verdicts = res.get("verdicts") or {}
             new = {c.code: _verdict(verdicts.get(c.code)) for c in INDIVIDUAL}
+            if any(v != "unknown" for v in new.values()):
+                reviewed.add(r.id)
             r.verdicts = _merge_verdicts(r.verdicts, new)
             for f in res.get("findings") or []:
                 out.append({**f, "scope": r.id, "_hint": r.line_start})
-        missing = [r.id for r in batch if not r.verdicts]
+        missing = [r for r in batch if r.id not in reviewed]
         if missing:
-            self.log(f"    модель не вернула вердикты для {', '.join(missing)}")
+            self.log("    модель пропустила: " + ", ".join(r.id for r in missing))
+            if recover:
+                for offset in range(0, len(missing), 3):
+                    out.extend(self._check_batch(doc, numbered, reqs, missing[offset:offset + 3],
+                                                 hits, recover=False))
         return out
 
     # --- шаг 4: проверка набора ----------------------------------------

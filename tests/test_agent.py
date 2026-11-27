@@ -610,3 +610,26 @@ def test_findings_only_repairs_array_envelope_locally():
             parse_json(raw, findings_only=True)
     with pytest.raises(ValueError):
         parse_json("[]")
+
+
+def test_partial_batch_recovers_only_missing_requirements(spec):
+    class Partial(FakeLLM):
+        def __init__(self):
+            super().__init__()
+            self.recoveries = 0
+
+        def _call(self, system, user):
+            text = super()._call(system, user)
+            if "проверить КАЖДОЕ" in user:
+                data = json.loads(text)
+                if "предыдущий ответ пропустил" in user:
+                    self.recoveries += 1
+                else:
+                    data["results"] = data["results"][:1]
+                return json.dumps(data)
+            return text
+
+    model = Partial()
+    result = Agent(model, verbose=False).run(load(spec))
+    assert model.recoveries == 1
+    assert all(any(v != "unknown" for v in r.verdicts.values()) for r in result.requirements)
