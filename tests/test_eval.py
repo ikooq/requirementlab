@@ -129,3 +129,23 @@ def test_rejected_match_cannot_cover_critical_defect(decision):
     result = score({"findings": [f, second]}, GOLDEN, labels=labels)
     assert result.found["G1"] == ["F-2"]
     assert not result.severity_ok["G1"]
+
+
+def test_feedback_keeps_benchmark_binding_but_changed_evidence_breaks_it(tmp_path):
+    import hashlib
+
+    finding = _f("F-1", 10, "Метод GET", severity="critical")
+    digest = hashlib.sha256(json.dumps([finding], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    labels = tmp_path / "labels.json"
+    labels.write_text(json.dumps({"findings_sha256": digest}), encoding="utf-8")
+    golden = tmp_path / "golden.json"
+    golden.write_text(json.dumps(GOLDEN), encoding="utf-8")
+    path = tmp_path / "report.json"
+    finding.update(analyst_decision="rejected", analyst_note="Нет нарушения")
+    args = [str(path), "--golden", str(golden), "--labels", str(labels), "--min-critical-recall", "1"]
+    path.write_text(json.dumps({"findings": [finding]}), encoding="utf-8")
+    assert main(args) == 1
+    finding["evidence"][0]["line_start"] += 1
+    path.write_text(json.dumps({"findings": [finding]}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        main(args)

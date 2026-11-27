@@ -248,8 +248,15 @@ def main(argv: list[str] | None = None) -> int:
             ap.error("Отчёт и эталон относятся к разным документам")
     if labels and labels.get("findings_sha256"):
         for report in reports:
-            payload = json.dumps(report["findings"], ensure_ascii=False, sort_keys=True).encode()
-            if hashlib.sha256(payload).hexdigest() != labels["findings_sha256"]:
+            findings = report["findings"]
+            # Older labels bind the full original JSON, before feedback fields existed.
+            content = [{k: v for k, v in f.items() if k not in ("analyst_decision", "analyst_note")}
+                       for f in findings]
+            pending = [dict(f, analyst_decision="pending", analyst_note="") for f in content]
+            def fingerprint(items):
+                return hashlib.sha256(json.dumps(items, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+            if not any(fingerprint(items) == labels["findings_sha256"]
+                       for items in (findings, content, pending)):
                 ap.error("Разметка относится к другой версии находок")
     scores = [score(r, golden, p, labels) for r, p in zip(reports, a.reports)]
     if a.min_f1 is not None and (not a.labels or any(s.f1 is None or s.f1 < a.min_f1 for s in scores)):
