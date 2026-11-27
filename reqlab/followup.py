@@ -17,7 +17,7 @@ from .prompts import SYSTEM, SEVERITY_GUIDE
 from .report import render, render_brief
 
 
-def extend(document, source, client, focus_lines=()):
+def extend(document, source, client, focus_lines=(), probes=None):
     raw = source.read_bytes()
     saved = json.loads(raw)
     _, errors = audit(saved, document)
@@ -55,6 +55,8 @@ criterion из списка, severity, дословные quotes, problem, recom
 одну находку с полями scenario, outcome_a, outcome_b (конкретные разные результаты),
 quotes (включая цитату этой строки), question (какое правило выбирает владелец).
 Не смешивай разные начальные условия. Если двусмысленность не подтверждается, findings пуст."""
+        if probes and line in probes:
+            task += "\nПроверяемая гипотеза (опровергни, если текст её исключает): " + probes[line]
         reply = client.complete_json(SYSTEM, task, step="поиск пропущенных сценариев: контрпримеры")
         for item in reply["findings"]:
             item = dict(item, scope="SET")
@@ -109,6 +111,7 @@ def main():
         parser.add_argument(key, type=Path)
     parser.add_argument("--model")
     parser.add_argument("--focus-line", action="append", type=int, default=[], help="проверить трактовки указанной строки")
+    parser.add_argument("--probe", nargs=2, action="append", default=[], metavar=("LINE", "QUESTION"))
     args = parser.parse_args()
     output = args.output
     targets = [output, output.with_suffix(".json"), output.with_name(output.stem + "-brief.md")]
@@ -117,7 +120,8 @@ def main():
     _load_env()
     try:
         client = from_env(model=args.model, cache_dir=ROOT / ".cache" / "followup")
-        result = extend(load(args.document), args.source, client, args.focus_line)
+        probes = {int(n): question for n, question in args.probe}
+        result = extend(load(args.document), args.source, client, [*args.focus_line, *probes], probes)
         targets[0].parent.mkdir(parents=True, exist_ok=True)
         for target, content in zip(targets, (render(result), json.dumps(result.to_json(), ensure_ascii=False, indent=2),
                                              render_brief(result))):
