@@ -1,6 +1,6 @@
 # RequirementLab — текст для подачи
 
-**Репозиторий:** https://github.com/ikooq/requirementlab/tree/audit-work
+**Репозиторий:** https://github.com/ikooq/requirementlab
 **Сдаваемая версия агента:** тег [`v1.3.0`](https://github.com/ikooq/requirementlab/tree/v1.3.0) — именно она сформировала отчёт
 **Отчёт агента:** `reports/report.md` (и `reports/report.json`), приложен к подаче
 **Проверяемый документ:** `docs/requirements.md` из репозитория организаторов, приложен к подаче
@@ -32,7 +32,7 @@ RequirementLab — AI-агент статического ревью требо�
 Комплект содержит результаты анализа версии `v1.3.0`. Чтобы проверить цитаты и регрессионные метрики без ключа и без обращения к модели, в чистой копии выполните:
 
 ```bash
-git clone --branch audit-work https://github.com/ikooq/requirementlab
+git clone https://github.com/ikooq/requirementlab
 cd requirementlab
 python -m pip install -r requirements.txt
 curl -fL --create-dirs -o docs/requirements.md https://raw.githubusercontent.com/BCC-HUB/ai-requirements-validator-task/928c1aa364265426105b69ba7a3444eac11b22db/docs/requirements.md
@@ -57,4 +57,4 @@ python run.py docs/requirements.md reports/replay-v130.md --model gemini-3.5-fla
 
 ## Скачать комплект подачи
 
-В GitHub откройте Actions → tests, выберите успешный прогон ветки `audit-work` и скачайте архив `requirementlab-submission-<коммит>` в разделе Artifacts. В нём исходный документ организаторов, полный и краткий отчёты агента, JSON, оценка по эталону и этот текст. Хеш в имени архива указывает ревизию сборки. Версия агента, создавшая сам отчёт, записана в его паспорте.
+В GitHub откройте Actions → tests, выберите успешный прогон ветки `main` и скачайте архив `requirementlab-submission-<коммит>` в разделе Artifacts. В нём исходный документ организаторов, полный и краткий отчёты агента, JSON, оценка по эталону и этот текст. Хеш в имени архива указывает ревизию сборки. Версия агента, создавшая сам отчёт, записана в его паспорте.
