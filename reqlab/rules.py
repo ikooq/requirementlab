@@ -108,9 +108,13 @@ def run(doc: Document) -> list[RuleHit]:
         wide_table = s.startswith("|") and s.count("|") > 3
         if _PLACEHOLDER_RE.search(s) and not (wide_table and "—" in s and not
                                               re.search(r"TBD|TODO|уточнить|заполн", s, re.I)):
+            # Имя поля в тексте находки: без него заглушки в разных полях выглядят
+            # одинаково и сливаются при поиске дублей.
+            field_name = _cells(s)[0].strip("*").strip() if s.startswith("|") else ""
+            what = f"Поле «{field_name}» не заполнено" if field_name else "Раздел не заполнен"
             hits.append(RuleHit(
                 "placeholder", "S-CMP", "major", i, i, s,
-                "Поле или раздел не заполнен (заглушка/прочерк).",
+                f"{what} (заглушка/прочерк): «{s.strip('|').strip()[:80]}».",
                 "Заполнить раздел или явно указать «не применимо» с обоснованием."))
         if _EMPTY_ROW_RE.match(s):
             hits.append(RuleHit(
