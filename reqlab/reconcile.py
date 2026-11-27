@@ -31,6 +31,38 @@ def partition(reply, count):
     return groups, rejected
 
 
+def separate_rule_fixes(group, candidates):
+    """Preserve individual field fixes even when the model groups template defects together."""
+    anchors = {}
+    other = []
+    for index in group:
+        finding = candidates[index][1]
+        if finding.get("source") == "rule":
+            key = (finding["criterion"], finding["evidence"][0]["line_start"])
+            anchors.setdefault(key, []).append(index)
+        else:
+            other.append(index)
+    if not anchors:
+        return [group]
+    unmatched = []
+    for index in other:
+        finding = candidates[index][1]
+        key = (finding["criterion"], finding["evidence"][0]["line_start"])
+        if key in anchors:
+            anchors[key].append(index)
+        else:
+            unmatched.append(index)
+    result = []
+    for members in anchors.values():
+        # Prefer a rule description naming the specific field over a generic placeholder.
+        members.sort(key=lambda i: (candidates[i][1].get("source") == "rule",
+                                    len(candidates[i][1]["problem"])), reverse=True)
+        result.append(members)
+    if unmatched:
+        result.append(unmatched)
+    return result
+
+
 def reconcile(document, paths, llm):
     candidates, rows, sources = {}, [], []
     for path in paths:
@@ -67,6 +99,7 @@ def reconcile(document, paths, llm):
             if attempt:
                 raise
             prompt += "\nИсправь распределение: " + str(error) + ". Предыдущий ответ: " + json.dumps(reply)
+    groups = [part for group in groups for part in separate_rule_fixes(group, candidates)]
     findings = []
     for i, group in enumerate(groups, 1):
         _, best = candidates[group[0]]

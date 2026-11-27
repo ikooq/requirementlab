@@ -9,3 +9,13 @@ def test_partition_preserves_every_candidate_once():
                   {"groups": [[True, 2]], "rejected": []}, {"groups": [[1, 9]], "rejected": []}):
         with pytest.raises(ValueError):
             partition(reply, 2)
+
+
+def test_different_template_fields_and_content_gaps_keep_separate_fixes():
+    from reqlab.reconcile import separate_rule_fixes
+    def f(line, problem, source="rule"):
+        return (None, {"source": source, "criterion": "S-CMP", "problem": problem,
+                       "evidence": [{"line_start": line}]})
+    candidates = {1: f(20, "Прочерк"), 2: f(25, "Поле паспорта пустое"),
+                  3: f(20, "Не заполнено поле владельца"), 4: f(40, "Нет плана восстановления", "llm")}
+    assert separate_rule_fixes([1, 2, 3, 4], candidates) == [[3, 1], [2], [4]]
