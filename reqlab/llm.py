@@ -67,9 +67,11 @@ class LLM:
     provider = "base"
 
     def __init__(self, model: str, *, cache_dir: Path | None = None, min_interval: float = 0.0,
-                 max_retries: int = 6, timeout: float = 600.0, temperature: float = 0.0,
-                 verbose: bool = True):
+                 max_retries: int = 8, overload_patience: int = 6, timeout: float = 600.0,
+                 temperature: float = 0.0, verbose: bool = True):
         self.model = model
+        # Неудач 5xx подряд до смены модели: между ними паузы 5+10+20+40+65 с ≈ 2,5 минуты.
+        self.overload_patience = min(overload_patience, max_retries)
         # Ключ кэша строится от запрошенной модели, а не от текущей: после перехода
         # на запасную модель повторный прогон всё равно находит ответы в кэше.
         self.requested_model = model
@@ -91,6 +93,20 @@ class LLM:
     def label(self) -> str:
         used = self.models_used or [self.model]
         return f"{self.provider} / {', '.join(used)}"
+
+    def _should_switch(self, e: _Retryable, fails: int) -> bool:
+        """Когда менять ключ или модель, а когда подождать.
+
+        Смена модели портит единообразие отчёта, поэтому переключаемся неохотно:
+        - дневная квота — сразу: она не восстановится до завтра;
+        - долгая блокировка квоты (429 с ожиданием больше минуты) — после двух неудач;
+        - перегрузка сервера (5xx) обычно проходит за минуты — ждём с нарастающей
+          паузой и меняем модель только после overload_patience неудач подряд."""
+        if e.daily_quota:
+            return True
+        if e.status >= 500:
+            return fails >= self.overload_patience
+        return e.model_unavailable and fails >= 2
 
     def _mark_exhausted(self) -> None:
         self._exhausted.add((self._key_idx, self.model))
@@ -131,12 +147,10 @@ class LLM:
             except _Retryable as e:
                 last_err = str(e)
                 fails_on_model += 1
-                # Модель перегружена или кончилась квота: после двух неудач — запасная модель.
-                # Дневная квота не восстановится за минуты — переключаемся сразу.
                 if e.daily_quota:
                     self._mark_exhausted()
-                if ((fails_on_model >= 2 or e.daily_quota) and e.model_unavailable
-                        and self._rotate(last_err, daily=e.daily_quota)):
+                if self._should_switch(e, fails_on_model) and self._rotate(last_err,
+                                                                          daily=e.daily_quota):
                     fails_on_model = 0
                     attempt = 0
                     time.sleep(2)

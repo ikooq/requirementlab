@@ -178,6 +178,45 @@ def test_gemini_keys_from_env(monkeypatch):
     assert gemini_keys_from_env() == ["a", "b", "c"]
 
 
+def test_short_overload_waits_on_same_model(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    sleeps = []
+    monkeypatch.setattr(llm_mod.time, "sleep", sleeps.append)
+    g = llm_mod.GeminiLLM("k", "main", fallbacks=["other"], verbose=False)
+    calls = {"n": 0}
+
+    def fake_post(url, headers, body):
+        calls["n"] += 1
+        assert "main" in url, "при кратковременной перегрузке модель не меняется"
+        if calls["n"] <= 4:
+            raise llm_mod._Retryable("HTTP 503", status=503)
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 1}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 1}
+    assert g.models_used == ["main"]
+    assert sleeps == [5.0, 10.0, 20.0, 40.0]  # нарастающая пауза
+
+
+def test_long_overload_switches_model_after_patience(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM("k", "main", fallbacks=["other"], verbose=False)
+    tried = []
+
+    def fake_post(url, headers, body):
+        tried.append("main" if "main" in url else "other")
+        if "main" in url:
+            raise llm_mod._Retryable("HTTP 503", status=503)
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 2}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 2}
+    assert tried == ["main"] * g.overload_patience + ["other"]
+
+
 def test_minute_rate_limit_waits_instead_of_switching(monkeypatch):
     from reqlab import llm as llm_mod
 
