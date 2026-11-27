@@ -36,3 +36,7 @@ python run.py docs/requirements.md reports/report.md
 ```
 
 Ключ Gemini бесплатный: https://aistudio.google.com/apikey. Отчёт ляжет в `reports/report.md`, данные — в `reports/report.json`.
+
+## Скачать комплект подачи
+
+В GitHub откройте Actions → tests, выберите успешный прогон ветки `audit-work` и скачайте архив `requirementlab-submission-<коммит>` в разделе Artifacts. В нём исходный документ организаторов, полный и краткий отчёты агента, JSON, оценка по эталону и этот текст. Хеш в имени архива указывает ревизию сборки. Версия агента, создавшая сам отчёт, записана в его паспорте.

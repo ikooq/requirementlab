@@ -16,3 +16,19 @@ jobs:
       - run: python eval/score.py reports/blind/autopay.json --holdout --labels eval/labels_autopay.json --min-critical-recall 1 --min-f1 0.783
       - run: python -m eval.evidence docs/requirements.md reports/report.json
       - run: python -m eval.evidence docs/blind/autopay.md reports/blind/autopay.json
+      - name: Check freeze control report and its source evidence
+        run: |
+          python eval/score.py reports/blind/card-freeze.json --golden eval/golden_freeze.json --min-recall 1 --min-critical-recall 1
+          python -m eval.evidence docs/blind/card-freeze.md reports/blind/card-freeze.json
+      - name: Package verified submission
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirementlab-submission-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            submission.md
+            docs/requirements.md
+            reports/report.md
+            reports/report.json
+            reports/report-brief.md
+            reports/metrics-case.md
