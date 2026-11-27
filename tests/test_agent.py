@@ -169,6 +169,28 @@ def test_daily_quota_switches_key_before_model(monkeypatch):
     assert g.label == "gemini / flash"  # модель не сменилась, только ключ
 
 
+def test_rejected_key_is_skipped(monkeypatch):
+    from reqlab import llm as llm_mod
+
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    g = llm_mod.GeminiLLM(["k1", "k2", "k3"], "flash", fallbacks=["lite"], verbose=False)
+    used = []
+
+    def fake_post(url, headers, body):
+        key = headers["x-goog-api-key"]
+        used.append(key)
+        if key == "k1":
+            raise llm_mod._Retryable("HTTP 429", None, 429, daily_quota=True)
+        if key == "k2":
+            raise llm_mod.LLMError('HTTP 403 от gemini: {"status": "PERMISSION_DENIED"}')
+        return {"candidates": [{"content": {"parts": [{"text": '{"ok": 3}'}]}}]}
+
+    g._post = fake_post
+    assert g.complete_json("s", "u") == {"ok": 3}
+    assert used == ["k1", "k2", "k3"] and g.model == "flash"
+    assert g.complete_json("s", "u2") == {"ok": 3} and used[-1] == "k3"
+
+
 def test_gemini_keys_from_env(monkeypatch):
     from reqlab.llm import gemini_keys_from_env
 

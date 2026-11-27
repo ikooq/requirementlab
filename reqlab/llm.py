@@ -235,6 +235,10 @@ class LLM:
         return r.json()
 
 
+# Ответы, после которых ключ бесполезен до конца прогона.
+_KEY_REJECTED = re.compile(r"HTTP 40[13]\b|API_KEY_INVALID|PERMISSION_DENIED")
+
+
 class GeminiLLM(LLM):
     provider = "gemini"
     BASE = "https://generativelanguage.googleapis.com/v1beta"
@@ -247,15 +251,26 @@ class GeminiLLM(LLM):
         chain = [model] + [m for m in (fallbacks or GEMINI_FALLBACKS) if m != model]
         self._queue = chain[1:]
         self._discovered = False
+        self._dead_keys: set[int] = set()
 
     @property
     def api_key(self) -> str:
         return self.api_keys[self._key_idx]
 
     def _free_key(self, model: str) -> int | None:
-        """Первый ключ, у которого для модели ещё есть дневная квота."""
+        """Первый рабочий ключ, у которого для модели ещё есть дневная квота."""
         return next((i for i in range(len(self.api_keys))
-                     if (i, model) not in self._exhausted), None)
+                     if i not in self._dead_keys and (i, model) not in self._exhausted), None)
+
+    def _drop_key(self, reason: str) -> bool:
+        """Ключ отклонён сервером: исключить его до конца прогона и взять следующий."""
+        self._dead_keys.add(self._key_idx)
+        k = self._free_key(self.model)
+        if k is None:
+            return False
+        self._log(f"  ключ №{self._key_idx + 1} отклонён ({reason}), переключаюсь на ключ №{k + 1}")
+        self._key_idx = k
+        return True
 
     def _rotate(self, reason: str, daily: bool = False) -> bool:
         # Дневная квота кончилась на этом ключе: сначала другой ключ с той же моделью —
@@ -311,14 +326,19 @@ class GeminiLLM(LLM):
                 "maxOutputTokens": 32768,
             },
         }
-        headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
         while True:
+            headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
             try:
                 data = self._post(f"{self.BASE}/models/{self.model}:generateContent", headers, body)
                 break
             except LLMError as e:
+                msg = str(e)
+                # Ключ отклонён (нет бесплатного тарифа у проекта, ключ недействителен) —
+                # он не заработает до конца прогона, берём следующий.
+                if _KEY_REJECTED.search(msg) and self._drop_key(msg.split(":", 1)[0]):
+                    continue
                 # Модель снята для новых пользователей (404) — сразу берём запасную.
-                if "HTTP 404" not in str(e) or not self._rotate("HTTP 404"):
+                if "HTTP 404" not in msg or not self._rotate("HTTP 404"):
                     raise
         cands = data.get("candidates") or []
         if not cands:
